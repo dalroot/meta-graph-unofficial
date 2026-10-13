@@ -1,13 +1,15 @@
-/**
- * Facebook Client - Direct Pure GraphQL / Meta Internal API
- */
+import { HttpClient } from '../core/http.js';
+import { FacebookPostMixin } from './mixins/post.js';
 
 export class FacebookClient {
   constructor(options = {}) {
-    this.profile = options.profile;
+    this.profile = options.profile || {};
+    this.http = new HttpClient({ profile: this.profile });
     this.cookies = options.cookies || '';
     this.fbDtsg = options.fbDtsg || '';
     this.cUser = options.cUser || '';
+
+    Object.assign(this, FacebookPostMixin);
   }
 
   setSession({ cookies, fbDtsg, cUser }) {
@@ -19,9 +21,6 @@ export class FacebookClient {
   getHeaders() {
     return {
       'Cookie': this.cookies,
-      'User-Agent': this.profile?.user_agent || 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.7922.75 Safari/537.36',
-      'Sec-CH-UA': this.profile?.sec_ch_ua || '',
-      'Sec-CH-UA-Platform': this.profile?.sec_ch_ua_platform || '',
       'Origin': 'https://www.facebook.com',
       'Referer': 'https://www.facebook.com/',
       'Content-Type': 'application/x-www-form-urlencoded'
