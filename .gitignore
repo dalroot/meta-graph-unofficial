@@ -1,6 +1,11 @@
 node_modules/
 *.log
 .env
+.env.*
 *_session.json
 *_cookies.json
+session.json
+credentials.json
+local/
 .DS_Store
+engine/bin/
