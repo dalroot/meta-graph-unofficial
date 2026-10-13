@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Modular Telegram Management Bot for meta-graph-unofficial
-Supports Combined Reply + Inline Keyboards, Ephemeral Message Cleaning,
-Account Lifecycle, and Smart Trigger Wizards.
+Supports Instant Instagram Publishing (via direct image URL or photo upload),
+Combined Reply + Inline Keyboards, Ephemeral Message Cleaning, and Facebook Posting.
 """
 
 import os
@@ -94,34 +94,109 @@ def get_ig_headers():
         "Referer": "https://www.instagram.com/",
     }
 
+def publish_instagram_photo_bytes(photo_bytes, caption=""):
+    headers = get_ig_headers()
+    upload_id = str(int(time.time() * 1000))
+    rupload_params = json.dumps({
+        "upload_id": upload_id,
+        "media_type": 1,
+        "upload_media_height": 720,
+        "upload_media_width": 720
+    })
+
+    upload_headers = headers.copy()
+    upload_headers.update({
+        "X-Instagram-Rupload-Params": rupload_params,
+        "X-Entity-Name": f"fb_uploader_{upload_id}",
+        "X-Entity-Length": str(len(photo_bytes)),
+        "Offset": "0",
+        "Content-Type": "image/jpeg",
+    })
+
+    # Step 1: Upload photo buffer
+    res_up = requests.post(
+        f"https://www.instagram.com/rupload_igphoto/{upload_id}",
+        data=photo_bytes,
+        headers=upload_headers,
+        impersonate="chrome120",
+        timeout=25
+    )
+    if res_up.status_code != 200:
+        raise RuntimeError(f"Upload failed: HTTP {res_up.status_code} - {res_up.text[:150]}")
+
+    time.sleep(1.8) # Human jitter
+
+    # Step 2: Configure post
+    conf_headers = headers.copy()
+    conf_headers["Content-Type"] = "application/x-www-form-urlencoded"
+    payload = {
+        "upload_id": upload_id,
+        "caption": caption,
+        "source_type": "library",
+        "disable_comments": 0,
+        "like_and_view_counts_disabled": 0
+    }
+
+    res_conf = requests.post(
+        "https://www.instagram.com/api/v1/media/configure/",
+        data=payload,
+        headers=conf_headers,
+        impersonate="chrome120",
+        timeout=25
+    )
+    if res_conf.status_code != 200:
+        raise RuntimeError(f"Configure failed: HTTP {res_conf.status_code} - {res_conf.text[:150]}")
+
+    data = res_conf.json()
+    media_id = data.get("media", {}).get("id") or data.get("media", {}).get("pk")
+    return media_id
+
 def handle_text(chat_id, text, message_id=None):
     text_clean = text.strip()
     user_state = state_mgr.get_user_state(chat_id)
     step = user_state.get("step")
 
-    # State Machine Handling for wizards
-    if step == "waiting_for_cookie":
-        if text_clean.startswith("sessionid="):
-            # Parse and temporarily show success
-            state_mgr.clear_user_state(chat_id)
-            if message_id:
-                delete_message(chat_id, message_id) # Delete sensitive cookie message from chat
-            send_message(chat_id, "✅ کوکی جدید دریافت و به صورت امن در نشست ثبت شد. پیام حاوی کوکی برای امنیت از چت پاک گردید.")
+    # State machine for instant instagram post
+    if step == "waiting_for_ig_instant_url":
+        url_input = text_clean
+        if not (url_input.startswith("http://") or url_input.startswith("https://")):
+            send_message(chat_id, "❌ لطفاً یک لینک معتبر تصویر وارد فرمایید.", get_cancel_keyboard())
             return
-        else:
-            send_message(chat_id, "❌ فرمت کوکی نامعتبر است. کوکی باید با <code>sessionid=</code> شروع شود.", get_cancel_keyboard())
-            return
-
-    if step == "waiting_for_trigger_keyword":
-        state_mgr.clear_user_state(chat_id)
+        
+        state_mgr.set_user_state(chat_id, "waiting_for_ig_instant_caption", {"image_url": url_input})
         msg = (
-            f"✅ <b>کلمه کلیدی ثبت شد:</b> <code>{text_clean}</code>\n\n"
-            "اکنون هر کامنتی زیر پست که شامل این کلمه باشد، تریگر ارسال خودکار دایرکت را فعال خواهد کرد."
+            "✅ <b>لینک تصویر دریافت شد.</b>\n\n"
+            "اکنون متن کپشن دلخواه خود را ارسال فرمایید (یا در صورت عدم نیاز به کپشن کلمه <code>none</code> را بفرستید):"
         )
-        send_message(chat_id, msg, get_smart_triggers_keyboard())
+        send_message(chat_id, msg, get_cancel_keyboard())
         return
 
-    # Main Navigation via Persistent Reply Keyboards
+    if step == "waiting_for_ig_instant_caption":
+        temp = user_state.get("temp_data", {})
+        image_url = temp.get("image_url")
+        caption = "" if text_clean.lower() == "none" else text_clean
+        state_mgr.clear_user_state(chat_id)
+
+        send_message(chat_id, "⏳ در حال دانلود تصویر و انتشار فوری در اینستاگرام...")
+        try:
+            img_res = requests.get(image_url, impersonate="chrome120", timeout=20)
+            if img_res.status_code != 200:
+                send_message(chat_id, f"❌ خطا در دانلود تصویر از لینک: HTTP {img_res.status_code}")
+                return
+            
+            media_id = publish_instagram_photo_bytes(img_res.content, caption)
+            msg = (
+                "🎉 <b>پست با موفقیت در اینستاگرام منتشر شد!</b>\n\n"
+                f"• شناسه مدیا: <code>{media_id}</code>\n"
+                f"• اکانت: @hokar368\n"
+                f"• کپشن: <i>{caption or 'بدون کپشن'}</i>\n\n"
+                "لینک پروفایل: https://www.instagram.com/hokar368/"
+            )
+            send_message(chat_id, msg)
+        except Exception as e:
+            send_message(chat_id, f"❌ خطا در انتشار پست: {str(e)}")
+        return
+
     if text_clean in ["/start", "/help", "منوی اصلی"]:
         state_mgr.clear_user_state(chat_id)
         msg = (
@@ -132,6 +207,15 @@ def handle_text(chat_id, text, message_id=None):
         send_message(chat_id, msg, get_main_reply_keyboard())
         accounts = state_mgr.get_accounts()
         send_message(chat_id, "👇 <b>مدیریت حساب‌ها و پنل سریع:</b>", get_accounts_inline_keyboard(accounts))
+        return
+
+    if text_clean in ["🚀 انتشار فوری در اینستاگرام", "/igpost"]:
+        state_mgr.set_user_state(chat_id, "waiting_for_ig_instant_url")
+        msg = (
+            "<b>🚀 انتشار فوری پست در اینستاگرام:</b>\n\n"
+            "لطفاً لینک مستقیم یک تصویر (یا عکسی از اینترنت/تلگرام) را ارسال فرمایید تا ربات بلافاصله آن را در پیج شما منتشر کند:"
+        )
+        send_message(chat_id, msg, get_cancel_keyboard())
         return
 
     if text_clean in ["📊 وضعیت و حساب‌ها", "/status"]:
@@ -288,32 +372,6 @@ def handle_callback(chat_id, message_id, data):
             send_message(chat_id, msg)
         else:
             send_message(chat_id, f"خطا در دریافت صندوق: کد {res.status_code}")
-        return
-
-    if data == "acc_add":
-        state_mgr.set_user_state(chat_id, "waiting_for_cookie")
-        msg = (
-            "<b>➕ افزودن نشست اینستاگرام جدید:</b>\n\n"
-            "لطفاً رشته کوکی کامل را ارسال فرمایید (پیام شما بلافاصله پس از ثبت برای حفظ امنیت از چت پاک خواهد شد)."
-        )
-        edit_message(chat_id, message_id, msg, get_cancel_keyboard())
-        return
-
-    if data == "trig_comment_keyword":
-        state_mgr.set_user_state(chat_id, "waiting_for_trigger_keyword")
-        msg = (
-            "<b>🎯 تعریف کلمه کلیدی کامنت:</b>\n\n"
-            "کلمه کلیدی موردنظر خود را ارسال کنید (مثلاً: <code>قیمت</code> یا <code>خرید</code> یا <code>لینک</code>):"
-        )
-        edit_message(chat_id, message_id, msg, get_cancel_keyboard())
-        return
-
-    if data == "ai_caption_wizard":
-        msg = (
-            "<b>✨ کپشن‌ساز هوشمند هوش مصنوعی:</b>\n\n"
-            "این قابلیت برای تولید خودکار متن‌های وایرال اینستاگرام با هشتگ‌گذاری هدفمند و ترغیب به کامنت‌گذاری در دست آماده‌سازی است."
-        )
-        send_message(chat_id, msg)
         return
 
     if data == "cancel_action":
