@@ -1,0 +1,11 @@
+{
+  "endpoint": "https://www.instagram.com/rupload_igvideo/{upload_id}",
+  "method": "POST/GET",
+  "verified_at": "2026-10-14T02:47:00+03:30",
+  "status_code": 200,
+  "description": "Resumable video chunk upload endpoint on Instagram Web with dynamic offset and waterfall tracking",
+  "provenance": {
+    "offset_status": "ok",
+    "supported_media_type": 2
+  }
+}

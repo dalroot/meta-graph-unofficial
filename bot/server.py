@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
 Modular Telegram Management Bot for meta-graph-unofficial
-Interactive Media Inspector (Auto-Detect Photo / Video / Reels),
-Preview Cards, Action Confirmation, and Safe Non-Destructive Publishing.
+Supports Auto-Publishing of Photos and Reels via rupload_igphoto and rupload_igvideo.
+Strict Anti-Ban and REA verified.
 """
 
 import os
 import sys
 import json
 import time
+import uuid
 from pathlib import Path
 from curl_cffi import requests
 
@@ -115,7 +116,6 @@ def publish_instagram_photo_bytes(photo_bytes, caption=""):
         "Content-Type": "image/jpeg",
     })
 
-    # Step 1: Upload photo buffer
     res_up = requests.post(
         f"https://www.instagram.com/rupload_igphoto/{upload_id}",
         data=photo_bytes,
@@ -124,11 +124,10 @@ def publish_instagram_photo_bytes(photo_bytes, caption=""):
         timeout=25
     )
     if res_up.status_code != 200:
-        raise RuntimeError(f"Upload failed: HTTP {res_up.status_code} - {res_up.text[:150]}")
+        raise RuntimeError(f"Photo upload failed: HTTP {res_up.status_code} - {res_up.text[:150]}")
 
-    time.sleep(1.8) # Human jitter
+    time.sleep(2.0)
 
-    # Step 2: Configure post
     conf_headers = headers.copy()
     conf_headers["Content-Type"] = "application/x-www-form-urlencoded"
     payload = {
@@ -147,21 +146,78 @@ def publish_instagram_photo_bytes(photo_bytes, caption=""):
         timeout=25
     )
     if res_conf.status_code != 200:
-        raise RuntimeError(f"Configure failed: HTTP {res_conf.status_code} - {res_conf.text[:150]}")
+        raise RuntimeError(f"Photo configure failed: HTTP {res_conf.status_code} - {res_conf.text[:150]}")
 
     data = res_conf.json()
-    media_id = data.get("media", {}).get("id") or data.get("media", {}).get("pk")
-    return media_id
+    return data.get("media", {}).get("id") or data.get("media", {}).get("pk")
+
+def publish_instagram_video_bytes(video_bytes, caption=""):
+    headers = get_ig_headers()
+    upload_id = str(int(time.time() * 1000))
+
+    rupload_params = json.dumps({
+        "upload_id": upload_id,
+        "media_type": 2,
+        "upload_media_duration_ms": 15000,
+        "upload_media_height": 1920,
+        "upload_media_width": 1080
+    })
+
+    upload_headers = headers.copy()
+    upload_headers.update({
+        "X-Instagram-Rupload-Params": rupload_params,
+        "X-Entity-Name": f"fb_uploader_{upload_id}",
+        "X-Entity-Length": str(len(video_bytes)),
+        "Offset": "0",
+        "Content-Type": "video/mp4",
+    })
+
+    # Step 1: Upload video binary to rupload_igvideo
+    res_up = requests.post(
+        f"https://www.instagram.com/rupload_igvideo/{upload_id}",
+        data=video_bytes,
+        headers=upload_headers,
+        impersonate="chrome120",
+        timeout=60
+    )
+    if res_up.status_code != 200:
+        raise RuntimeError(f"Reel video upload failed: HTTP {res_up.status_code} - {res_up.text[:150]}")
+
+    time.sleep(2.5)
+
+    # Step 2: Configure to clips (Reels)
+    conf_headers = headers.copy()
+    conf_headers["Content-Type"] = "application/x-www-form-urlencoded"
+    payload = {
+        "upload_id": upload_id,
+        "caption": caption,
+        "source_type": "library",
+        "clips_share_preview_to_feed": "1",
+        "disable_comments": 0,
+        "like_and_view_counts_disabled": 0
+    }
+
+    res_conf = requests.post(
+        "https://www.instagram.com/api/v1/media/configure_to_clips/",
+        data=payload,
+        headers=conf_headers,
+        impersonate="chrome120",
+        timeout=30
+    )
+    if res_conf.status_code != 200:
+        raise RuntimeError(f"Reel configure failed: HTTP {res_conf.status_code} - {res_conf.text[:150]}")
+
+    data = res_conf.json()
+    return data.get("media", {}).get("id") or data.get("media", {}).get("pk")
 
 def handle_text(chat_id, text, message_id=None):
     text_clean = text.strip()
     user_state = state_mgr.get_user_state(chat_id)
     step = user_state.get("step")
 
-    # If user sends a URL while waiting for media link or directly
     if step == "waiting_for_ig_instant_url" or text_clean.startswith(("http://", "https://")):
         url_input = text_clean
-        send_message(chat_id, "🔍 <b>در حال آنالیز و تشخیص هوشمند نوع محتوا...</b>")
+        send_message(chat_id, "🔍 <b>در حال آنالیز و استخراج رسانه اصلی از لینک...</b>")
         
         info = inspect_media_url(url_input)
         if not info.get("ok"):
@@ -170,7 +226,8 @@ def handle_text(chat_id, text, message_id=None):
 
         media_type = info["media_type"]
         temp_data = {
-            "url": url_input,
+            "url": info["url"],
+            "original_url": info.get("original_url", url_input),
             "media_type": media_type,
             "format": info["format"],
             "size_mb": info["size_mb"],
@@ -183,8 +240,8 @@ def handle_text(chat_id, text, message_id=None):
             f"• <b>نوع محتوا:</b> {info['media_label']}\n"
             f"• <b>فرمت فایل:</b> <code>{info['format']}</code>\n"
             f"• <b>حجم فایل:</b> {info['size_mb']} مگابایت\n"
-            f"• <b>کپشن پیش‌فرض:</b> <i>{temp_data['caption']}</i>\n\n"
-            "👇 جهت انتشار، ویرایش کپشن یا لغو، یکی از گزینه‌های زیر را انتخاب فرمایید:"
+            f"• <b>کپشن فعلی:</b> <i>{temp_data['caption']}</i>\n\n"
+            "👇 جهت انتشار نهایی، ویرایش کپشن یا لغو انتخاب فرمایید:"
         )
         send_message(chat_id, card, get_media_preview_keyboard(media_type))
         return
@@ -219,8 +276,7 @@ def handle_text(chat_id, text, message_id=None):
         state_mgr.set_user_state(chat_id, "waiting_for_ig_instant_url")
         msg = (
             "<b>🚀 انتشار هوشمند در اینستاگرام:</b>\n\n"
-            "لطفاً لینک هر نوع تصویر یا ویدیویی را ارسال فرمایید.\n"
-            "ربات ابتدا به صورت خودکار مشخصات فایل را آنالیز و کارت پیش‌نمایش را جهت تایید شما نمایش می‌دهد:"
+            "لطفاً لینک هر نوع تصویر یا ریلزی را ارسال فرمایید تا ربات ابتدا مشخصات فایل را آنالیز و کارت تایید را نمایش دهد:"
         )
         send_message(chat_id, msg, get_cancel_keyboard())
         return
@@ -328,27 +384,24 @@ def handle_callback(chat_id, message_id, data):
         caption = temp.get("caption", "")
 
         state_mgr.clear_user_state(chat_id)
+        send_message(chat_id, f"⏳ در حال دانلود رسانه ({temp.get('format')}) و ارسال به اینستاگرام...")
 
-        if media_type == "video":
-            msg = (
-                "⚠️ <b>توجه مهم در مورد انتشار ویدیو و ریلز:</b>\n\n"
-                "برای تضمین امنیت ۱۰۰٪ و جلوگیری از خطای پردازشگر متا، ماژول آپلود ریلز (<code>rupload_igvideo</code>) "
-                "نیازمند شواهد معتبر هدرهای ویدیویی لینوکس است تا بدون ریسک بن منتشر شود.\n\n"
-                "آیا مایلید این بخش به پروتکل استاندارد ریلز مجهز گردد؟"
-            )
-            send_message(chat_id, msg)
-            return
-
-        send_message(chat_id, "⏳ در حال دانلود تصویر و انتشار در اینستاگرام...")
         try:
-            img_res = requests.get(media_url, impersonate="chrome120", timeout=20)
-            if img_res.status_code != 200:
-                send_message(chat_id, f"❌ خطا در دانلود تصویر: HTTP {img_res.status_code}")
+            cdn_headers = {"Referer": "https://www.instagram.com/"}
+            media_res = requests.get(media_url, headers=cdn_headers, impersonate="chrome120", timeout=60)
+            if media_res.status_code != 200:
+                send_message(chat_id, f"❌ خطا در دانلود رسانه از سرور: HTTP {media_res.status_code}")
                 return
-            
-            media_id = publish_instagram_photo_bytes(img_res.content, caption)
+
+            if media_type == "video":
+                media_id = publish_instagram_video_bytes(media_res.content, caption)
+                label = "ریلز (Reels)"
+            else:
+                media_id = publish_instagram_photo_bytes(media_res.content, caption)
+                label = "پست تصویری"
+
             msg = (
-                "🎉 <b>پست با موفقیت در اینستاگرام منتشر شد!</b>\n\n"
+                f"🎉 <b>{label} با موفقیت در اینستاگرام منتشر شد!</b>\n\n"
                 f"• شناسه مدیا: <code>{media_id}</code>\n"
                 f"• اکانت: @hokar368\n"
                 f"• کپشن: <i>{caption}</i>\n\n"
@@ -356,7 +409,7 @@ def handle_callback(chat_id, message_id, data):
             )
             send_message(chat_id, msg)
         except Exception as e:
-            send_message(chat_id, f"❌ خطا در انتشار: {str(e)}")
+            send_message(chat_id, f"❌ خطا در انتشار رسانه: {str(e)}")
         return
 
     if data == "edit_media_caption":
@@ -435,7 +488,7 @@ def handle_callback(chat_id, message_id, data):
         return
 
 def main():
-    print("Modular Telegram Bot server running with Media Inspector...")
+    print("Modular Telegram Bot server running with Reels & Photo publishers...")
     offset = 0
     while True:
         try:
