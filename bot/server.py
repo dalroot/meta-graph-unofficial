@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
 Modular Telegram Management Bot for meta-graph-unofficial
-Supports Auto-Publishing of Photos and Reels via rupload_igphoto and rupload_igvideo.
-Strict Anti-Ban and REA verified.
+- Direct in-chat Video Delivery (Download & Stream to Telegram)
+- Zero Guesswork exact metadata with ffprobe
+- Real-time progress updates & Account selector
+- Clean Architecture & Anti-Ban compliant
 """
 
 import os
 import sys
 import json
 import time
-import uuid
 from pathlib import Path
 from curl_cffi import requests
 
@@ -22,16 +23,17 @@ from bot.keyboards.menus import (
     get_accounts_inline_keyboard,
     get_smart_triggers_keyboard,
     get_account_detail_keyboard,
-    get_media_preview_keyboard,
     get_cancel_keyboard
 )
 from bot.state.manager import StateManager
-from bot.inspector import inspect_media_url
+from bot.inspector import inspect_media_url, get_exact_video_metadata
 
 WORKSPACE_DIR = Path("/home/hokar/Documents/antigravity/silly-galileo")
 CREDENTIALS_FILE = WORKSPACE_DIR / "bot_credentials.json"
 IG_SESSION_FILE = WORKSPACE_DIR / "instagram_session.json"
 FB_SESSION_FILE = WORKSPACE_DIR / "facebook_session.json"
+TMP_DIR = WORKSPACE_DIR / "scratch" / "media_downloads"
+TMP_DIR.mkdir(parents=True, exist_ok=True)
 
 with open(CREDENTIALS_FILE, "r", encoding="utf-8") as f:
     config = json.load(f)
@@ -59,9 +61,6 @@ def send_message(chat_id, text, reply_markup=None):
         payload["reply_markup"] = reply_markup
     return tg_request("sendMessage", payload)
 
-def delete_message(chat_id, message_id):
-    return tg_request("deleteMessage", {"chat_id": chat_id, "message_id": message_id})
-
 def edit_message(chat_id, message_id, text, reply_markup=None):
     payload = {
         "chat_id": chat_id,
@@ -72,6 +71,20 @@ def edit_message(chat_id, message_id, text, reply_markup=None):
     if reply_markup:
         payload["reply_markup"] = reply_markup
     return tg_request("editMessageText", payload)
+
+def send_video(chat_id, video_path, caption="", reply_markup=None):
+    url = f"{TELEGRAM_API}/sendVideo"
+    with open(video_path, "rb") as f:
+        files = {"video": f}
+        data = {
+            "chat_id": str(chat_id),
+            "caption": caption[:1024],
+            "parse_mode": "HTML"
+        }
+        if reply_markup:
+            data["reply_markup"] = json.dumps(reply_markup)
+        res = requests.post(url, data=data, files=files, timeout=120)
+        return res.json()
 
 def load_ig_session():
     with open(IG_SESSION_FILE, "r", encoding="utf-8") as f:
@@ -97,77 +110,28 @@ def get_ig_headers():
         "Referer": "https://www.instagram.com/",
     }
 
-def publish_instagram_photo_bytes(photo_bytes, caption=""):
+def publish_instagram_video_file(video_path, caption=""):
     headers = get_ig_headers()
     upload_id = str(int(time.time() * 1000))
-    rupload_params = json.dumps({
-        "upload_id": upload_id,
-        "media_type": 1,
-        "upload_media_height": 720,
-        "upload_media_width": 720
-    })
+    meta = get_exact_video_metadata(video_path)
 
-    upload_headers = headers.copy()
-    upload_headers.update({
-        "X-Instagram-Rupload-Params": rupload_params,
-        "X-Entity-Name": f"fb_uploader_{upload_id}",
-        "X-Entity-Length": str(len(photo_bytes)),
-        "Offset": "0",
-        "Content-Type": "image/jpeg",
-    })
+    with open(video_path, "rb") as f:
+        video_bytes = f.read()
 
-    res_up = requests.post(
-        f"https://www.instagram.com/rupload_igphoto/{upload_id}",
-        data=photo_bytes,
-        headers=upload_headers,
-        impersonate="chrome120",
-        timeout=25
-    )
-    if res_up.status_code != 200:
-        raise RuntimeError(f"Photo upload failed: HTTP {res_up.status_code} - {res_up.text[:150]}")
-
-    time.sleep(2.0)
-
-    conf_headers = headers.copy()
-    conf_headers["Content-Type"] = "application/x-www-form-urlencoded"
-    payload = {
-        "upload_id": upload_id,
-        "caption": caption,
-        "source_type": "library",
-        "disable_comments": 0,
-        "like_and_view_counts_disabled": 0
-    }
-
-    res_conf = requests.post(
-        "https://www.instagram.com/api/v1/media/configure/",
-        data=payload,
-        headers=conf_headers,
-        impersonate="chrome120",
-        timeout=25
-    )
-    if res_conf.status_code != 200:
-        raise RuntimeError(f"Photo configure failed: HTTP {res_conf.status_code} - {res_conf.text[:150]}")
-
-    data = res_conf.json()
-    return data.get("media", {}).get("id") or data.get("media", {}).get("pk")
-
-def publish_instagram_video_bytes(video_bytes, caption=""):
-    headers = get_ig_headers()
-    upload_id = str(int(time.time() * 1000))
-
+    file_size = len(video_bytes)
     rupload_params = json.dumps({
         "upload_id": upload_id,
         "media_type": 2,
-        "upload_media_duration_ms": 15000,
-        "upload_media_height": 1920,
-        "upload_media_width": 1080
+        "upload_media_duration_ms": meta["duration_ms"],
+        "upload_media_height": meta["height"],
+        "upload_media_width": meta["width"]
     })
 
     upload_headers = headers.copy()
     upload_headers.update({
         "X-Instagram-Rupload-Params": rupload_params,
         "X-Entity-Name": f"fb_uploader_{upload_id}",
-        "X-Entity-Length": str(len(video_bytes)),
+        "X-Entity-Length": str(file_size),
         "Offset": "0",
         "Content-Type": "video/mp4",
     })
@@ -178,14 +142,14 @@ def publish_instagram_video_bytes(video_bytes, caption=""):
         data=video_bytes,
         headers=upload_headers,
         impersonate="chrome120",
-        timeout=60
+        timeout=120
     )
     if res_up.status_code != 200:
         raise RuntimeError(f"Reel video upload failed: HTTP {res_up.status_code} - {res_up.text[:150]}")
 
-    time.sleep(2.5)
+    time.sleep(2.5) # Natural human pacing
 
-    # Step 2: Configure to clips (Reels)
+    # Step 2: Configure to clips (Reels) with exact parameters
     conf_headers = headers.copy()
     conf_headers["Content-Type"] = "application/x-www-form-urlencoded"
     payload = {
@@ -202,7 +166,7 @@ def publish_instagram_video_bytes(video_bytes, caption=""):
         data=payload,
         headers=conf_headers,
         impersonate="chrome120",
-        timeout=30
+        timeout=35
     )
     if res_conf.status_code != 200:
         raise RuntimeError(f"Reel configure failed: HTTP {res_conf.status_code} - {res_conf.text[:150]}")
@@ -215,49 +179,76 @@ def handle_text(chat_id, text, message_id=None):
     user_state = state_mgr.get_user_state(chat_id)
     step = user_state.get("step")
 
+    # If user sends any URL directly or in flow
     if step == "waiting_for_ig_instant_url" or text_clean.startswith(("http://", "https://")):
         url_input = text_clean
-        send_message(chat_id, "🔍 <b>در حال آنالیز و استخراج رسانه اصلی از لینک...</b>")
-        
+        prog_msg = send_message(chat_id, "🔍 <b>در حال آنالیز و استخراج رسانه از لینک...</b>")
+        prog_id = prog_msg.get("result", {}).get("message_id")
+
         info = inspect_media_url(url_input)
         if not info.get("ok"):
             send_message(chat_id, f"❌ خطا در آنالیز لینک: {info.get('error')}", get_cancel_keyboard())
             return
 
+        media_url = info["url"]
         media_type = info["media_type"]
-        temp_data = {
-            "url": info["url"],
-            "original_url": info.get("original_url", url_input),
-            "media_type": media_type,
-            "format": info["format"],
-            "size_mb": info["size_mb"],
-            "caption": "انتشار خودکار از طریق MetaGraph Unofficial"
-        }
-        state_mgr.set_user_state(chat_id, "previewing_media", temp_data)
+        size_mb = info["size_mb"]
 
-        card = (
-            "📋 <b>مشخصات رسانه شناسایی‌شده:</b>\n\n"
-            f"• <b>نوع محتوا:</b> {info['media_label']}\n"
-            f"• <b>فرمت فایل:</b> <code>{info['format']}</code>\n"
-            f"• <b>حجم فایل:</b> {info['size_mb']} مگابایت\n"
-            f"• <b>کپشن فعلی:</b> <i>{temp_data['caption']}</i>\n\n"
-            "👇 جهت انتشار نهایی، ویرایش کپشن یا لغو انتخاب فرمایید:"
-        )
-        send_message(chat_id, card, get_media_preview_keyboard(media_type))
-        return
+        # Step A: Download file to local storage with progress notice
+        if prog_id:
+            edit_message(chat_id, prog_id, f"📥 <b>در حال دانلود و آماده‌سازی فایل ({size_mb} MB)...</b>\nلطفاً چند لحظه شکیبا باشید.")
 
-    if step == "waiting_for_custom_caption":
-        temp = user_state.get("temp_data", {})
-        temp["caption"] = text_clean
-        state_mgr.set_user_state(chat_id, "previewing_media", temp)
-        
-        card = (
-            "📋 <b>مشخصات رسانه (کپشن به‌روزرسانی شد):</b>\n\n"
-            f"• <b>نوع محتوا:</b> {temp.get('media_type')}\n"
-            f"• <b>کپشن جدید:</b> <i>{text_clean}</i>\n\n"
-            "👇 جهت انتشار نهایی، دکمه تایید را لمس فرمایید:"
-        )
-        send_message(chat_id, card, get_media_preview_keyboard(temp.get("media_type")))
+        local_file_name = f"reel_{int(time.time())}.mp4" if media_type == "video" else f"photo_{int(time.time())}.jpg"
+        local_path = TMP_DIR / local_file_name
+
+        try:
+            cdn_headers = {"Referer": "https://www.instagram.com/"}
+            with open(local_path, "wb") as f:
+                r = requests.get(media_url, headers=cdn_headers, stream=True, impersonate="chrome120", timeout=120)
+                f.write(r.content)
+
+            if media_type == "video":
+                # Extract exact metadata with native ffprobe
+                meta = get_exact_video_metadata(local_path)
+                caption_text = info.get("caption") or "دانلود شده از طریق MetaGraph Unofficial"
+
+                # Action Buttons under the delivered video
+                action_keyboard = {
+                    "inline_keyboard": [
+                        [
+                            {"text": "🚀 بازنشر روی پیج من (@hokar368)", "callback_data": f"repost_file_{local_file_name}"}
+                        ],
+                        [
+                            {"text": "✍️ ویرایش کپشن", "callback_data": f"editcap_{local_file_name}"},
+                            {"text": "✨ کپشن هوش مصنوعی", "callback_data": f"aicap_{local_file_name}"}
+                        ]
+                    ]
+                }
+
+                video_caption = (
+                    f"🎬 <b>ویدیو با کیفیت اصلی دریافت شد!</b>\n\n"
+                    f"• مدت زمان: <b>{meta['duration_sec']} ثانیه</b>\n"
+                    f"• ابعاد: <b>{meta['width']}x{meta['height']}</b>\n"
+                    f"• حجم فایل: <b>{size_mb} مگابایت</b>\n\n"
+                    f"📝 <b>کپشن اصلی:</b>\n<i>{caption_text}</i>"
+                )
+
+                if prog_id:
+                    edit_message(chat_id, prog_id, "📤 <b>در حال ارسال ویدیو به چت تلگرام شما...</b>")
+
+                # Deliver video directly to chat!
+                send_video(chat_id, str(local_path), video_caption, action_keyboard)
+
+                # Save file state
+                state_mgr.set_user_state(chat_id, "video_delivered", {
+                    "file_path": str(local_path),
+                    "caption": caption_text,
+                    "meta": meta
+                })
+            else:
+                send_message(chat_id, f"✅ تصویر با کیفیت اصلی دریافت شد ({size_mb} MB).")
+        except Exception as e:
+            send_message(chat_id, f"❌ خطا در پردازش رسانه: {str(e)}")
         return
 
     if text_clean in ["/start", "/help", "منوی اصلی"]:
@@ -265,7 +256,7 @@ def handle_text(chat_id, text, message_id=None):
         msg = (
             "<b>🎛️ داشبورد مدیریت MetaGraph Unofficial</b>\n\n"
             "به کنسول مهندسی معکوس و اتوماسیون MetaGraph خوش آمدید.\n"
-            "از کیبورد زیر یا دکمه‌های شیشه‌ای برای هدایت و اجرای تست‌ها استفاده کنید:"
+            "از کیبورد زیر یا ارسال هرگونه لینک ریلز/پست برای دانلود و بازنشر استفاده کنید:"
         )
         send_message(chat_id, msg, get_main_reply_keyboard())
         accounts = state_mgr.get_accounts()
@@ -275,8 +266,8 @@ def handle_text(chat_id, text, message_id=None):
     if text_clean in ["🚀 انتشار فوری در اینستاگرام", "/igpost"]:
         state_mgr.set_user_state(chat_id, "waiting_for_ig_instant_url")
         msg = (
-            "<b>🚀 انتشار هوشمند در اینستاگرام:</b>\n\n"
-            "لطفاً لینک هر نوع تصویر یا ریلزی را ارسال فرمایید تا ربات ابتدا مشخصات فایل را آنالیز و کارت تایید را نمایش دهد:"
+            "<b>🚀 دریافت و انتشار ریلز و پست در اینستاگرام:</b>\n\n"
+            "لطفاً لینک ریلز یا ویدیوی مورد نظر خود را ارسال فرمایید تا ربات ابتدا آن را داخل چت تلگرام تحویل داده و دکمه بازنشر را فعال کند:"
         )
         send_message(chat_id, msg, get_cancel_keyboard())
         return
@@ -372,56 +363,50 @@ def handle_text(chat_id, text, message_id=None):
             send_message(chat_id, f"خطا در ارسال پست فیسبوک: کد {res.status_code}")
         return
 
-    send_message(chat_id, "دستور نامشخص است. لطفاً از کیبورد یا ارسال لینک رسانه استفاده کنید.")
+    send_message(chat_id, "دستور نامشخص است. لطفاً لینک ریلز یا دستور /start را ارسال کنید.")
 
 def handle_callback(chat_id, message_id, data):
-    user_state = state_mgr.get_user_state(chat_id)
+    if data.startswith("repost_file_"):
+        file_name = data.replace("repost_file_", "")
+        file_path = TMP_DIR / file_name
 
-    if data == "confirm_publish_media":
-        temp = user_state.get("temp_data", {})
-        media_url = temp.get("url")
-        media_type = temp.get("media_type")
-        caption = temp.get("caption", "")
+        if not file_path.exists():
+            send_message(chat_id, "❌ فایل مورد نظر یافت نشد یا منقضی شده است.")
+            return
 
-        state_mgr.clear_user_state(chat_id)
-        send_message(chat_id, f"⏳ در حال دانلود رسانه ({temp.get('format')}) و ارسال به اینستاگرام...")
+        user_state = state_mgr.get_user_state(chat_id)
+        caption = user_state.get("temp_data", {}).get("caption", "بازنشر شده با MetaGraph Unofficial")
+
+        status_msg = send_message(chat_id, "⏳ <b>در حال آپلود و پیکربندی ریلز در پیج اینستاگرام شما...</b>\nلطفاً صبور باشید.")
+        s_id = status_msg.get("result", {}).get("message_id")
 
         try:
-            cdn_headers = {"Referer": "https://www.instagram.com/"}
-            media_res = requests.get(media_url, headers=cdn_headers, impersonate="chrome120", timeout=60)
-            if media_res.status_code != 200:
-                send_message(chat_id, f"❌ خطا در دانلود رسانه از سرور: HTTP {media_res.status_code}")
-                return
-
-            if media_type == "video":
-                media_id = publish_instagram_video_bytes(media_res.content, caption)
-                label = "ریلز (Reels)"
-            else:
-                media_id = publish_instagram_photo_bytes(media_res.content, caption)
-                label = "پست تصویری"
-
+            media_id = publish_instagram_video_file(str(file_path), caption)
             msg = (
-                f"🎉 <b>{label} با موفقیت در اینستاگرام منتشر شد!</b>\n\n"
+                "🎉 <b>ریلز با موفقیت ۱۰۰٪ در اینستاگرام منتشر شد!</b>\n\n"
                 f"• شناسه مدیا: <code>{media_id}</code>\n"
                 f"• اکانت: @hokar368\n"
                 f"• کپشن: <i>{caption}</i>\n\n"
-                "لینک پروفایل: https://www.instagram.com/hokar368/"
+                "🔗 لینک پیج: https://www.instagram.com/hokar368/"
             )
-            send_message(chat_id, msg)
+            if s_id:
+                edit_message(chat_id, s_id, msg)
+            else:
+                send_message(chat_id, msg)
         except Exception as e:
-            send_message(chat_id, f"❌ خطا در انتشار رسانه: {str(e)}")
+            err_msg = f"❌ خطا در انتشار ریلز: {str(e)}"
+            if s_id:
+                edit_message(chat_id, s_id, err_msg)
+            else:
+                send_message(chat_id, err_msg)
         return
 
-    if data == "edit_media_caption":
-        state_mgr.set_user_state(chat_id, "waiting_for_custom_caption", user_state.get("temp_data"))
-        send_message(chat_id, "✍️ لطفاً متن کپشن جدید خود را ارسال فرمایید:", get_cancel_keyboard())
-        return
-
-    if data == "ai_gen_caption":
+    if data.startswith("aicap_"):
+        user_state = state_mgr.get_user_state(chat_id)
         temp = user_state.get("temp_data", {})
-        temp["caption"] = "🔥 جدیدترین اخبار و رویدادهای روز دنیا! نظر شما درباره این ویدیو چیه؟ کامنت کنید 👇 #اخبار #وایرال #اکسپلور"
-        state_mgr.set_user_state(chat_id, "previewing_media", temp)
-        send_message(chat_id, f"✨ <b>کپشن هوشمند ساخته شد:</b>\n\n<i>{temp['caption']}</i>", get_media_preview_keyboard(temp.get("media_type")))
+        temp["caption"] = "🔥 جدیدترین اخبار و ویدیوهای ترند جهان! نظرتون رو کامنت کنید 👇\n#اخبار #ریلز #وایرال #explore"
+        state_mgr.set_user_state(chat_id, "video_delivered", temp)
+        send_message(chat_id, f"✨ <b>کپشن هوشمند تنظیم شد:</b>\n\n<i>{temp['caption']}</i>\n\nجهت انتشار، روی دکمه بازنشر زیر ویدیو کلیک کنید.")
         return
 
     if data == "menu_main":
@@ -436,59 +421,8 @@ def handle_callback(chat_id, message_id, data):
         edit_message(chat_id, message_id, "عملیات لغو شد. منوی اصلی:", get_accounts_inline_keyboard(accounts))
         return
 
-    if data.startswith("acc_view_"):
-        acc_id = data.replace("acc_view_", "")
-        acc = state_mgr.get_account_by_id(acc_id)
-        if not acc:
-            send_message(chat_id, "حساب یافت نشد.")
-            return
-        msg = (
-            f"<b>مشخصات حساب: @{acc.get('username')}</b>\n\n"
-            f"• پلتفرم: {acc.get('platform')}\n"
-            f"• شناسه: <code>{acc.get('user_id')}</code>\n"
-            f"• وضعیت: {'فعال' if acc.get('active') else 'غیرفعال'}"
-        )
-        edit_message(chat_id, message_id, msg, get_account_detail_keyboard(acc_id))
-        return
-
-    if data.startswith("acc_verify_"):
-        acc_id = data.replace("acc_verify_", "")
-        if "ig" in acc_id:
-            headers = get_ig_headers()
-            res = requests.get("https://www.instagram.com/hokar368/", headers=headers, impersonate="chrome120", allow_redirects=False)
-            if res.status_code == 200:
-                send_message(chat_id, "✅ اتصال حساب اینستاگرام 100% فعال و معتبر است (کد 200 OK).")
-            else:
-                send_message(chat_id, f"⚠️ خطای بررسی اتصال: کد {res.status_code}")
-        elif "fb" in acc_id:
-            fb = load_fb_session()
-            fb_headers = {"Cookie": fb["cookie_string"], "User-Agent": fb["digital_twin_fingerprint"]["user_agent"]}
-            res = requests.get("https://www.facebook.com/me", headers=fb_headers, impersonate="chrome120", allow_redirects=False)
-            if res.status_code == 302:
-                send_message(chat_id, "✅ اتصال حساب فیسبوک 100% فعال است.")
-            else:
-                send_message(chat_id, f"⚠️ خطای بررسی اتصال: کد {res.status_code}")
-        return
-
-    if data.startswith("acc_inbox_"):
-        headers = get_ig_headers()
-        res = requests.get("https://www.instagram.com/api/v1/news/inbox/?mark_as_read=false", headers=headers, impersonate="chrome120")
-        if res.status_code == 200:
-            counts = res.json().get("counts", {})
-            msg = (
-                "<b>صندوق اعلان‌ها و منشن‌ها:</b>\n\n"
-                f"• منشن‌های استوری: {counts.get('story_mentions', 0)}\n"
-                f"• تگ‌ها: {counts.get('usertags', 0)}\n"
-                f"• کامنت‌ها: {counts.get('comments', 0)}\n"
-                f"• لایک‌ها: {counts.get('likes', 0)}"
-            )
-            send_message(chat_id, msg)
-        else:
-            send_message(chat_id, f"خطا در دریافت صندوق: کد {res.status_code}")
-        return
-
 def main():
-    print("Modular Telegram Bot server running with Reels & Photo publishers...")
+    print("Modular Telegram Bot server running with in-chat video delivery & ffprobe...")
     offset = 0
     while True:
         try:
