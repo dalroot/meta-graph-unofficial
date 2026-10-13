@@ -1,0 +1,67 @@
+{
+  "platform": "instagram",
+  "account": "@hokar368",
+  "user_id": "19835089130",
+  "source_image": "/home/hokar/Downloads/1111111111111.png",
+  "timestamp": "2026-10-13T21:40:00+03:30",
+  "operations": [
+    {
+      "action": "feed_post_upload",
+      "status": "success",
+      "upload_step": {
+        "endpoint": "https://www.instagram.com/rupload_igphoto/1791914989931",
+        "method": "POST",
+        "upload_id": "1791914989931",
+        "response_status": 200,
+        "response_body": {
+          "upload_id": "1791914989931",
+          "status": "ok"
+        }
+      },
+      "configure_step": {
+        "endpoint": "https://www.instagram.com/api/v1/media/configure/",
+        "method": "POST",
+        "payload": {
+          "upload_id": "1791914989931",
+          "caption": "⚡ Reverse engineering verification test post from Antigravity",
+          "source_type": "library",
+          "disable_comments": 0,
+          "like_and_view_counts_disabled": 0
+        },
+        "response_status": 200,
+        "media_id": "4007195903156614326_19835089130",
+        "fbid": "17909535336484380",
+        "status": "ok"
+      }
+    },
+    {
+      "action": "story_upload",
+      "status": "success",
+      "upload_step": {
+        "endpoint": "https://www.instagram.com/rupload_igphoto/1791915027149",
+        "method": "POST",
+        "upload_id": "1791915027149",
+        "response_status": 200,
+        "response_body": {
+          "upload_id": "1791915027149",
+          "status": "ok"
+        }
+      },
+      "configure_step": {
+        "endpoint": "https://www.instagram.com/api/v1/media/configure_to_story/",
+        "method": "POST",
+        "payload": {
+          "upload_id": "1791915027149",
+          "source_type": "library",
+          "configure_mode": "1"
+        },
+        "response_status": 200,
+        "media_id": "4007196196481064068_19835089130",
+        "fbid": "18118235482767677",
+        "is_reel_media": true,
+        "expiring_at": 1792001433,
+        "status": "ok"
+      }
+    }
+  ]
+}

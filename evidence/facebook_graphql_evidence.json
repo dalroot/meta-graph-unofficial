@@ -1,0 +1,142 @@
+[
+  {
+    "type": "response",
+    "status": 200,
+    "data": "{\"data\":{\"viewer\":{\"video_settings\":{\"autoplay_setting_www\":\"default_autoplay\"}}},\"extensions\":{\"server_metadata\":{\"request_start_time_ms\":1791856762554,\"time_at_flush_ms\":1791856762571},\"is_final\":true}}"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "data": "{\"data\":{\"viewer\":{\"bootstrap_keywords\":{\"edges\":[{\"node\":{\"keyword_text\":\"\\u062a\\u0648\\u0627\\u0646\\u0627 \\u0645\\u062d\\u0645\\u062f\\u06cc\",\"item_logging_id\":\"2026-10-12:sHnyDr\",\"item_logging_info\":\"{\\\"source\\\":\\\"entity_bootstrap_unknown_suggestion\\\",\\\"kwEntConnected\\\":true,\\\"category\\\":\\\"unknown\\\",\\\"kwEntId\\\":8290951442683964498,\\\"kwEntIds\\\":[8290951442683964498],\\\"suggestion_keys\\\":{\\\"keys\\\":[],\\\"default_key\\\":\\\"-6048614729575935921\\\",\\\"tier\\\":0},\\\"explainability_code\\\":1,\\\"features\\\":{\\\"16171\\\":1,\\\"16082\\\":16171,\\\"16178\\\":1,\\\"16173\\\":0.43272506139744,\\\"91043\\\":1,\\\"90684\\\":1}}\",\"sts_info\":null,\"suggestion_keys\":{\"tier\":0,\"keys\":[],\"default_key\":\"-6048614729575935921\"}}},{\"node\":{\"keyword_text\":\"hokar veria\",\"item_logging_id\":\"2026-10-12:4P5yE9\",\"item_logging_info\":\"{\\\"source\\\":\\\"entity_bootstrap_connected_user_suggestion\\\",\\\"kwEntConnected\\\":true,\\\"category\\\":\\\"user\\\",\\\"kwEntId\\\":61594901048716,\\\"kwEntIds\\\":[61594901048716],\\\"structured_suggestion_type\\\":3,\\\"high_confidence_code\\\":null,\\\"high_confidence_id\\\":null,\\\"disambiguation_codes\\\":null,\\\"direct_nav_type\\\":6,\\\"direct_nav_id\\\":61594901048716,\\\"sts_is_connected\\\":false,\\\"sts_entity_type\\\":\\\"user\\\",\\\"suggestion_keys\\\":{\\\"keys\\\":[\\\"6147809952628753578\\\"],\\\"default_key\\\":\\\"8022044070264370256\\\",\\\"tier\\\":200},\\\"explainability_code\\\":1,\\\"features\\\":{\\\"16161\\\":1,\\\"16082\\\":16161,\\\"16178\\\":1,\\\"16173\\\":0.41433482725281,\\\"91043\\\":1,\\\"90684\\\":1}}\",\"sts_info\":{\"direct_nav_result\":{\"ent_id\":\"61594901048716\",\"img_url\":\"https://scontent-dus1-1.xx.fbcdn.net/v/t1.30497-1/453178253_471506465671661_2781666950760530985_n.png?stp=cp0_dst-png&cstp=mx2048x2048&ctp=s74x74&_nc_cat=1&ccb=1-7&_nc_sid=9ccaae&_nc_ohc=xbZPQ_IVpFwQ7kNvwG1TInV&_nc_oc=AdrFtsBzVXLZTul2dzSbQPIjyXiGekBji_VsIEwRBAvQUYnt6H8zKQMTrhr9HvQ-n5M&_nc_zt=24&_nc_ht=scontent-dus1-1.xx&_nc_ss=7b2a8&oh=00_AQNzTMedodRT8B2Z52qxHG8dUl3-qqnAdBlJpYbPNmmc7g&oe=6AF50E3A\",\"is_verified\":false,\"link_url\":\"https://www.facebook.com/profile.php?id=61594901048716\",\"entity_type\":\"user\",\"snipp"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "data": "{\"data\":{\"viewer\":{\"call_blocked_until\":0}},\"extensions\":{\"server_metadata\":{\"request_start_time_ms\":1791856763663,\"time_at_flush_ms\":1791856763682},\"is_final\":true}}"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "data": "{\"data\":{\"viewer\":{\"actor\":{\"__typename\":\"User\",\"__isProfile\":\"User\",\"id\":\"61594901048716\",\"can_use_magic_uploads\":false,\"can_use_magic_uploads_with_subscription_id\":false,\"can_use_magic_uploads_with_qr_code\":false,\"can_use_magic_uploads_with_video\":false,\"has_professional_features_for_watch\":false,\"name\":\"Hokar Veria\",\"profile_picture\":{\"uri\":\"https://scontent-dus1-1.xx.fbcdn.net/v/t1.30497-1/453178253_471506465671661_2781666950760530985_n.png?stp=cp0_dst-png&cstp=mx2048x2048&ctp=s40x40&_nc_cat=1&ccb=1-7&_nc_sid=136b72&_nc_ohc=xbZPQ_IVpFwQ7kNvwG1TInV&_nc_oc=AdrFtsBzVXLZTul2dzSbQPIjyXiGekBji_VsIEwRBAvQUYnt6H8zKQMTrhr9HvQ-n5M&_nc_zt=24&_nc_ht=scontent-dus1-1.xx&_nc_ss=7f2a8&oh=00_AQMP0sQY1CoiTjQ1Futesfg6XIGI_f8FHnEShWtnhiwbvA&oe=6AF50E3A\"},\"url\":\"https://www.facebook.com/profile.php?id=61594901048716\",\"short_name\":\"Hokar\",\"viewer\":{\"is_additional_profile_plus\":false,\"is_primary_profile_plus\":false,\"is_eligible_imagine_with_ai_regular_advertiser\":false,\"is_in_imagine_tier_3_privacy_jurisdiction\":false},\"profile_plus_category_display_name\":null,\"can_viewer_see_biz_intercept\":false,\"delegate_page_id\":null,\"delegate_page\":null,\"composer_interception\":null,\"vcuDisableCometSfvRedirect\":{\"enabled\":true},\"has_taggable_products\":false,\"is_product_tagging_apux_snoozed\":false,\"is_eligible_smcta_on_promode\":false,\"share_post_to_channels_settings\":null,\"reels_remix_and_original_audio_settings\":\"OA_ENABLED_REMIX_ENABLED\"},\"feed_comet_composer\":{\"sprouts\":[{\"__typename\":\"CometComposerUploadMediaSprout\",\"__isICometComposerSprout\":\"CometComposerUploadMediaSprout\",\"promotion_config\":null,\"label\":\"Photo/video\",\"icon\":{\"uri\":\"https://static.xx.fbcdn.net/rsrc.php/yX/r/8_VnccIZfRa.webp\"},\"sprout_type\":\"MEDIA\",\"__module_operation_useSproutsFromRelay_composer\":{\"__dr\":\"CometComposerUploadMediaSprout_sprout$normalization.graphql\"},\"__module_component_useSproutsFromRelay_composer\":{\"__dr\":\"CometComposerUploadMediaSprout.react\"}},{\"__typename\":\"CometComposerWithTaggingSprout\",\"__isICometCompos"
+  },
+  {
+    "type": "request",
+    "url": "https://www.facebook.com/api/graphql/",
+    "timestamp": "2026-10-13T01:59:35.763Z",
+    "friendlyName": "ComposerStoryCreateMutation",
+    "docId": "29230635736522902",
+    "variables": {
+      "input": {
+        "composer_entry_point": "inline_composer",
+        "composer_source_surface": "newsfeed",
+        "composer_type": "feed",
+        "idempotence_token": "49f0c8f2-fc78-40a8-a420-d4ee3c6c0919_FEED",
+        "source": "WWW",
+        "ai_generated_self_disclosure_metadata": {
+          "was_self_disclosed_as_ai_generated": false
+        },
+        "audience": {
+          "privacy": {
+            "allow": [],
+            "base_state": "EVERYONE",
+            "deny": [],
+            "tag_expansion_state": "UNSPECIFIED"
+          }
+        },
+        "message": {
+          "ranges": [],
+          "text": "Automated test post via Antigravity Agent 🚀"
+        },
+        "inline_activities": [],
+        "text_format_preset_id": "0",
+        "publishing_flow": {
+          "supported_flows": [
+            "ASYNC_SILENT",
+            "ASYNC_NOTIF",
+            "FALLBACK"
+          ]
+        },
+        "reels_remix": {
+          "is_original_audio_reusable": true,
+          "remix_status": "ENABLED"
+        },
+        "post_publish_story_data": {
+          "reshare_post_as_sticker": "DISABLED"
+        },
+        "logging": {
+          "composer_session_id": "49f0c8f2-fc78-40a8-a420-d4ee3c6c0919"
+        },
+        "navigation_data": {
+          "attribution_id_v2": "CometHomeRoot.react,comet.home,via_cold_start,1791856762108,510043,4748854339,,"
+        },
+        "tracking": [
+          null
+        ],
+        "event_share_metadata": {
+          "surface": "newsfeed"
+        },
+        "actor_id": "61594901048716",
+        "client_mutation_id": "1"
+      },
+      "feedLocation": "NEWSFEED",
+      "feedbackSource": 1,
+      "focusCommentID": null,
+      "gridMediaWidth": null,
+      "groupID": null,
+      "scale": 1,
+      "privacySelectorRenderLocation": "COMET_STREAM",
+      "checkPhotosToReelsUpsellEligibility": true,
+      "referringStoryRenderLocation": null,
+      "renderLocation": "homepage_stream",
+      "useDefaultActor": false,
+      "inviteShortLinkKey": null,
+      "isFeed": true,
+      "isFundraiser": false,
+      "isFunFactPost": false,
+      "isGroup": false,
+      "isEvent": false,
+      "isTimeline": false,
+      "isSocialLearning": false,
+      "isPageNewsFeed": false,
+      "isProfileReviews": false,
+      "isWorkSharedDraft": false,
+      "__relay_internal__pv__CometUFIShareActionMigrationrelayprovider": true,
+      "__relay_internal__pv__GHLShouldChangeSponsoredDataFieldNamerelayprovider": true,
+      "__relay_internal__pv__GHLShouldChangeAdIdFieldNamerelayprovider": true,
+      "__relay_internal__pv__CometUFI_dedicated_comment_routable_dialog_gkrelayprovider": true,
+      "__relay_internal__pv__CometUFICommentAutoTranslationTyperelayprovider": "AUTO_TRANSLATE",
+      "__relay_internal__pv__CometUFICommentAvatarStickerAnimatedImagerelayprovider": false,
+      "__relay_internal__pv__CometUFICommentActionLinksRewriteEnabledrelayprovider": true,
+      "__relay_internal__pv__IsWorkUserrelayprovider": false,
+      "__relay_internal__pv__CometUFIReactionsEnableShortNamerelayprovider": false,
+      "__relay_internal__pv__CometUFISingleLineUFIrelayprovider": true,
+      "__relay_internal__pv__CometFeedStory_enable_reactor_facepilerelayprovider": false,
+      "__relay_internal__pv__CometFeedStory_enable_social_bubblesrelayprovider": false,
+      "__relay_internal__pv__CometFeedStory_enable_post_permalink_white_space_clickrelayprovider": false,
+      "__relay_internal__pv__TestPilotShouldIncludeDemoAdUseCaserelayprovider": false,
+      "__relay_internal__pv__FBReels_deprecate_short_form_video_context_gkrelayprovider": true,
+      "__relay_internal__pv__FBReels_enable_view_dubbed_audio_type_gkrelayprovider": true,
+      "__relay_internal__pv__CometFeedShareMedia_shouldPrefetchShareImagerelayprovider": true,
+      "__relay_internal__pv__CometImmersivePhotoCanUserDisable3DMotionrelayprovider": false,
+      "__relay_internal__pv__WorkCometIsEmployeeGKProviderrelayprovider": false,
+      "__relay_internal__pv__IsMergQAPollsrelayprovider": false,
+      "__relay_internal__pv__FBReelsMediaFooter_comet_enable_reels_ads_gkrelayprovider": true,
+      "__relay_internal__pv__relay_provider_comet_ufi_ssr_seo_deferrelayprovider": true,
+      "__relay_internal__pv__FBReelsIFUTileContent_reelsIFUPlayOnHoverrelayprovider": true,
+      "__relay_internal__pv__GroupsCometGYSJFeedItemHeightrelayprovider": 206,
+      "__relay_internal__pv__StoriesShouldEnablePhotosensitiveContentWarningrelayprovider": false,
+      "__relay_internal__pv__ShouldEnableBakedInTextStoriesrelayprovider": false,
+      "__relay_internal__pv__StoriesShouldIncludeFbNotesrelayprovider": true,
+      "__relay_internal__pv__groups_comet_use_glvrelayprovider": false,
+      "__relay_internal__pv__GHLShouldChangeSponsoredAuctionDistanceFieldNamerelayprovider": true,
+      "__relay_internal__pv__GHLShouldUseSponsoredAuctionLabelFieldNameV1relayprovider": true,
+      "__relay_internal__pv__GHLShouldUseSponsoredAuctionLabelFieldNameV2relayprovider": false
+    },
+    "serverTimestamps": "true"
+  },
+  {
+    "type": "response",
+    "status": 200,
+    "data": "{\"data\":{\"story_create\":{\"story_id\":null,\"post_id\":null,\"publishing_flow\":\"FALLBACK\",\"story\":{\"id\":\"UzpfSTYxNTk0OTAxMDQ4NzE2OjEyMjEwODg1NzQxMzQ5NjcwMToxMjIxMDg4NTc0MTM0OTY3MDE=\",\"scheduled_publish_time\":null,\"url\":\"https://www.facebook.com/permalink.php?story_fbid=pfbid09hCgpC1PtfJwwqRyn6TabvnTcjRL8WiaRoZRTbxxvV7NLzkZAGZVSWEnPmfTYCCYl&id=61594901048716\",\"legacy_story_hideable_id\":\"122108857413496701\",\"is_marked_as_spam_by_admin_assistant\":false,\"is_anonymous\":false,\"default_actor\":{\"__typename\":\"User\",\"id\":\"61594901048716\"},\"if_viewer_can_learn_more_about_pending_post\":null,\"should_render_p2r_after_creation_upsell_comet\":false,\"composer_end_page_renderer\":null,\"to\":null,\"work_shared_draft_post_title\":null,\"work_shared_draft_final_author\":null,\"work_shared_draft_post_status\":null,\"work_shared_draft_scheduled_time\":null,\"viewer\":{\"is_member_of_readonly_work_company\":false}},\"feed_story_edge\":{\"cursor\":null,\"sposnsor_new_distac_action\":null,\"brs_content_label\":null,\"deduplication_key\":null,\"feed_backend_data\":{\"qid\":\"0\",\"original_qid\":\"0\",\"vsid\":\"\",\"vspos\":0,\"should_recent_vpv_fetch_tracking_data\":false,\"serialized_payloads\":\"GwJGAJi2k+OlgRwe4tysgPyZ3AcbAUgOABsAAA==\"},\"category\":\"ORGANIC\",\"node\":{\"__typename\":\"Story\",\"__isFeedUnit\":\"Story\",\"__isNode\":\"Story\",\"id\":\"UzpfSTYxNTk0OTAxMDQ4NzE2OjEyMjEwODg1NzQxMzQ5NjcwMToxMjIxMDg4NTc0MTM0OTY3MDE=\",\"debug_info\":null,\"th_dat_spo\":null,\"feedback\":{\"associated_group\":null,\"id\":\"ZmVlZGJhY2s6MTIyMTA4ODU3NDEzNDk2NzAx\",\"owning_profile\":{\"__typename\":\"User\",\"name\":\"Hokar Veria\",\"short_name\":\"Hokar\",\"id\":\"61594901048716\"}},\"is_story_civic\":null,\"cache_id\":\"6673256955792916109\",\"matched_terms\":[],\"post_id\":\"122108857413496701\",\"creation_time\":1791856775,\"cix_screen\":null,\"attachments\":[],\"future_of_feed_info\":{\"should_reverse_message_and_attachment_position\":false,\"should_overlay_header\":false,\"aspect_ratio_update\":-1,\"web_reshare_variant\":\"NORMAL\"},\"attached_story\":null,\"bumpers\":null,\"comet_sections\":{\"__typename\":\"CometStorySections\""
+  }
+]

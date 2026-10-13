@@ -1,0 +1,38 @@
+{
+  "platform": "instagram",
+  "target": "@hokar368",
+  "user_id": "19835089130",
+  "analyzed_at": "2026-10-13T22:30:00+03:30",
+  "direct_messaging_graphql": {
+    "endpoint": "https://www.instagram.com/api/graphql",
+    "method": "POST",
+    "operations": [
+      {
+        "friendly_name": "PolarisDirectInboxQuery",
+        "doc_id": "27909866362025854",
+        "description": "Fetches active direct threads, chat lists, and latest messages"
+      },
+      {
+        "friendly_name": "useIGDSystemFolderUnreadThreadCountQuery",
+        "doc_id": "27437959689223570",
+        "description": "Fetches count of unread messages across folders"
+      },
+      {
+        "friendly_name": "IGDBadgeCountOffMsysQuery",
+        "doc_id": "27393860900250970",
+        "description": "Fetches badge counters for new DM notifications"
+      }
+    ]
+  },
+  "smart_mentions_and_activity": {
+    "endpoint": "https://www.instagram.com/api/v1/news/inbox/?mark_as_read=false",
+    "method": "GET",
+    "supported_triggers": [
+      "story_mentions",
+      "usertags",
+      "comments",
+      "likes",
+      "comment_likes"
+    ]
+  }
+}

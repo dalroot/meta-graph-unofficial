@@ -1,0 +1,22 @@
+{
+  "endpoint": "https://www.instagram.com/api/v1/media/{media_id}/comments/",
+  "method": "GET",
+  "verified_at": "2026-10-13T22:48:00+03:30",
+  "status_code": 200,
+  "description": "Retrieves real-time comment threads, author metadata, and comment ids for smart triggers",
+  "sample_response_structure": {
+    "comment_count": 1,
+    "comments": [
+      {
+        "pk": "18089061314692257",
+        "text": "sample trigger comment",
+        "user_id": "19835089130",
+        "user": {
+          "username": "hokar368",
+          "pk": "19835089130"
+        }
+      }
+    ],
+    "status": "ok"
+  }
+}
