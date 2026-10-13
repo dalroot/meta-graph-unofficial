@@ -1,0 +1,13 @@
+{
+  "endpoint": "https://www.instagram.com/api/v1/feed/reels_tray/",
+  "method": "GET",
+  "verified_at": "2026-10-14T00:00:00+03:30",
+  "status_code": 200,
+  "description": "Retrieves active story tray items including author metadata and high-res media candidates for downloading",
+  "sample_story_response": {
+    "story_id": "4007196196481064068_19835089130",
+    "media_type": 1,
+    "cdn_download_status": 200,
+    "download_verified": true
+  }
+}

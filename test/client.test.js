@@ -9,12 +9,14 @@ test('MetaGraph initializes with valid OS profile', () => {
   assert.equal(mg.profile.sec_ch_ua_platform, '"Linux"');
 });
 
-test('InstagramClient mixins are correctly composed', () => {
+test('InstagramClient mixins are correctly composed including DownloadMixin', () => {
   const client = new InstagramClient();
   assert.equal(typeof client.setSession, 'function');
   assert.equal(typeof client.getMediaComments, 'function');
   assert.equal(typeof client.getNotificationsInbox, 'function');
   assert.equal(typeof client.getUserProfile, 'function');
+  assert.equal(typeof client.getReelsTray, 'function');
+  assert.equal(typeof client.downloadMediaUrl, 'function');
 });
 
 test('FacebookClient mixins are correctly composed', () => {

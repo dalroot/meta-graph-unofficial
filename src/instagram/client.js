@@ -3,6 +3,7 @@ import { AuthMixin } from './mixins/auth.js';
 import { UserMixin } from './mixins/user.js';
 import { CommentMixin } from './mixins/comment.js';
 import { ActivityMixin } from './mixins/activity.js';
+import { DownloadMixin } from './mixins/download.js';
 
 export class InstagramClient {
   constructor(options = {}) {
@@ -17,6 +18,7 @@ export class InstagramClient {
     Object.assign(this, UserMixin);
     Object.assign(this, CommentMixin);
     Object.assign(this, ActivityMixin);
+    Object.assign(this, DownloadMixin);
   }
 
   getHeaders(referer = 'https://www.instagram.com/') {
