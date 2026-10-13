@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="MetaGraph Unofficial Banner" width="100%" />
+</p>
+
 # MetaGraph Unofficial (`meta-graph-unofficial`)
 
 High-performance, modular unofficial Meta Graph API client for Instagram and Facebook.
@@ -48,6 +52,8 @@ meta-graph-unofficial/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                     # Automated Node test & Go build pipeline
+├── assets/
+│   └── banner.png                     # Official project social preview banner
 ├── docs/
 │   ├── CONTRIBUTING.md                # Inviolable project rules & REA standards
 │   ├── REA_METHODOLOGY.md             # Reverse engineering methodology & ledger
@@ -61,6 +67,8 @@ meta-graph-unofficial/
 │   ├── instagram_inbox_mentions_evidence.json # News inbox & story mentions trace
 │   ├── comments_evidence.json         # Real-time comment stream trace
 │   └── facebook_graphql_evidence.json # Facebook GraphQL posting trace
+├── examples/
+│   └── basic_usage.js                 # Executable walkthrough script
 ├── templates/
 │   └── os_profiles.json               # Pre-calibrated OS & browser templates
 ├── src/
