@@ -1,0 +1,26 @@
+{
+  "name": "meta-graph-unofficial",
+  "version": "0.1.0",
+  "description": "High-Performance Unofficial Meta Graph API Library for Instagram & Facebook (REA-Engineered, Zero-Browser, Strict OS/Browser Fingerprint Profiles)",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "instagram-api",
+    "facebook-graph-api",
+    "meta-graph",
+    "unofficial-api",
+    "reverse-engineered",
+    "rea",
+    "smart-direct",
+    "anti-detect"
+  ],
+  "author": "T4wroot",
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
