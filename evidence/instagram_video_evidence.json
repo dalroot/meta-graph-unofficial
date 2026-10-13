@@ -1,0 +1,39 @@
+{
+  "platform": "instagram",
+  "account": "@hokar368",
+  "user_id": "19835089130",
+  "timestamp": "2026-10-14T03:27:09+03:30",
+  "operations": [
+    {
+      "action": "video_publish",
+      "status": "success",
+      "step_1_cover": {
+        "endpoint": "https://www.instagram.com/rupload_igphoto/{upload_id}",
+        "method": "POST",
+        "response_status": 200,
+        "content_type": "image/jpeg"
+      },
+      "step_2_video": {
+        "endpoint": "https://www.instagram.com/rupload_igvideo/{upload_id}",
+        "method": "POST",
+        "response_status": 200,
+        "content_type": "video/mp4"
+      },
+      "step_3_configure": {
+        "endpoint": "https://www.instagram.com/api/v1/media/configure/?video=1",
+        "method": "POST",
+        "payload": {
+          "upload_id": "1791935793000",
+          "caption": "⚡ MetaGraph Unofficial Video Test",
+          "source_type": "library",
+          "disable_comments": 0,
+          "like_and_view_counts_disabled": 0
+        },
+        "response_status": 200,
+        "media_id": "4007370536895776066_19835089130",
+        "fbid": "17879964243543555",
+        "status": "ok"
+      }
+    }
+  ]
+}

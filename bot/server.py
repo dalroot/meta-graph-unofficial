@@ -11,6 +11,7 @@ import os
 import sys
 import json
 import time
+import subprocess
 from pathlib import Path
 import requests as std_requests
 from curl_cffi import requests
@@ -116,6 +117,44 @@ def publish_instagram_video_file(video_path, caption=""):
     upload_id = str(int(time.time() * 1000))
     meta = get_exact_video_metadata(video_path)
 
+    # 1. Extract cover photo from frame 0
+    cover_path = Path(video_path).parent / f"cover_{upload_id}.jpg"
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-ss", "0", "-i", str(video_path), "-vframes", "1", "-q:v", "2", str(cover_path)],
+            check=True,
+            capture_output=True
+        )
+    except Exception as e:
+        print("Cover extraction warning:", e)
+
+    # 2. Upload cover photo to rupload_igphoto
+    if cover_path.exists():
+        with open(cover_path, "rb") as f:
+            cover_bytes = f.read()
+        cover_rupload_params = json.dumps({
+            "upload_id": upload_id,
+            "media_type": 2
+        })
+        cover_headers = headers.copy()
+        cover_headers.update({
+            "X-Instagram-Rupload-Params": cover_rupload_params,
+            "X-Entity-Name": f"fb_uploader_{upload_id}",
+            "X-Entity-Length": str(len(cover_bytes)),
+            "Offset": "0",
+            "Content-Type": "image/jpeg",
+        })
+        res_cover = requests.post(
+            f"https://www.instagram.com/rupload_igphoto/{upload_id}",
+            data=cover_bytes,
+            headers=cover_headers,
+            impersonate="chrome120",
+            timeout=35
+        )
+        if res_cover.status_code != 200:
+            print(f"Cover upload warning: {res_cover.status_code} - {res_cover.text[:100]}")
+
+    # 3. Upload video binary to rupload_igvideo
     with open(video_path, "rb") as f:
         video_bytes = f.read()
 
@@ -137,43 +176,53 @@ def publish_instagram_video_file(video_path, caption=""):
         "Content-Type": "video/mp4",
     })
 
-    # Step 1: Upload video binary to rupload_igvideo
     res_up = requests.post(
         f"https://www.instagram.com/rupload_igvideo/{upload_id}",
         data=video_bytes,
         headers=upload_headers,
         impersonate="chrome120",
-        timeout=120
+        timeout=180
     )
     if res_up.status_code != 200:
-        raise RuntimeError(f"Reel video upload failed: HTTP {res_up.status_code} - {res_up.text[:150]}")
+        raise RuntimeError(f"Video binary upload failed: HTTP {res_up.status_code} - {res_up.text[:150]}")
 
-    time.sleep(2.5) # Natural human pacing
+    # 4. Wait for Meta transcode pipeline (crucial to prevent VideoSourceDurationCheckException)
+    time.sleep(6.0)
 
-    # Step 2: Configure to clips (Reels) with exact parameters
+    # 5. Configure video publication
     conf_headers = headers.copy()
     conf_headers["Content-Type"] = "application/x-www-form-urlencoded"
     payload = {
         "upload_id": upload_id,
         "caption": caption,
         "source_type": "library",
-        "clips_share_preview_to_feed": "1",
         "disable_comments": 0,
         "like_and_view_counts_disabled": 0
     }
 
+    # Universal configure for Instagram web videos & clips
     res_conf = requests.post(
-        "https://www.instagram.com/api/v1/media/configure_to_clips/",
+        "https://www.instagram.com/api/v1/media/configure/?video=1",
         data=payload,
         headers=conf_headers,
         impersonate="chrome120",
-        timeout=35
+        timeout=45
     )
     if res_conf.status_code != 200:
-        raise RuntimeError(f"Reel configure failed: HTTP {res_conf.status_code} - {res_conf.text[:150]}")
+        # Fallback to configure_to_clips if needed
+        res_conf = requests.post(
+            "https://www.instagram.com/api/v1/media/configure_to_clips/",
+            data=payload,
+            headers=conf_headers,
+            impersonate="chrome120",
+            timeout=45
+        )
+
+    if res_conf.status_code != 200:
+        raise RuntimeError(f"Video configure failed: HTTP {res_conf.status_code} - {res_conf.text[:150]}")
 
     data = res_conf.json()
-    return data.get("media", {}).get("id") or data.get("media", {}).get("pk")
+    return data.get("media", {}).get("id") or data.get("media", {}).get("pk") or upload_id
 
 def handle_text(chat_id, text, message_id=None):
     text_clean = text.strip()
