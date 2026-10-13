@@ -12,6 +12,7 @@ import sys
 import json
 import time
 from pathlib import Path
+import requests as std_requests
 from curl_cffi import requests
 
 # Add repo to sys.path
@@ -46,9 +47,9 @@ state_mgr = StateManager()
 def tg_request(method, data=None):
     url = f"{TELEGRAM_API}/{method}"
     if data:
-        res = requests.post(url, json=data, timeout=35)
+        res = std_requests.post(url, json=data, timeout=35)
     else:
-        res = requests.get(url, timeout=35)
+        res = std_requests.get(url, timeout=35)
     return res.json()
 
 def send_message(chat_id, text, reply_markup=None):
@@ -75,7 +76,7 @@ def edit_message(chat_id, message_id, text, reply_markup=None):
 def send_video(chat_id, video_path, caption="", reply_markup=None):
     url = f"{TELEGRAM_API}/sendVideo"
     with open(video_path, "rb") as f:
-        files = {"video": f}
+        files = {"video": (Path(video_path).name, f, "video/mp4")}
         data = {
             "chat_id": str(chat_id),
             "caption": caption[:1024],
@@ -83,7 +84,7 @@ def send_video(chat_id, video_path, caption="", reply_markup=None):
         }
         if reply_markup:
             data["reply_markup"] = json.dumps(reply_markup)
-        res = requests.post(url, data=data, files=files, timeout=120)
+        res = std_requests.post(url, data=data, files=files, timeout=300)
         return res.json()
 
 def load_ig_session():
@@ -203,9 +204,21 @@ def handle_text(chat_id, text, message_id=None):
 
         try:
             cdn_headers = {"Referer": "https://www.instagram.com/"}
+            r = requests.get(media_url, headers=cdn_headers, stream=True, impersonate="chrome120", timeout=120)
+            total_size = int(r.headers.get("content-length", 0))
+            downloaded = 0
+            last_edit = time.time()
             with open(local_path, "wb") as f:
-                r = requests.get(media_url, headers=cdn_headers, stream=True, impersonate="chrome120", timeout=120)
-                f.write(r.content)
+                for chunk in r.iter_content(chunk_size=1024 * 512):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if prog_id and total_size > 0 and (time.time() - last_edit > 3.0):
+                            pct = int(downloaded * 100 / total_size)
+                            mb_done = round(downloaded / (1024 * 1024), 1)
+                            mb_all = round(total_size / (1024 * 1024), 1)
+                            edit_message(chat_id, prog_id, f"📥 <b>در حال دانلود رسانه...</b>\n📊 پیشرفت: {pct}% ({mb_done}/{mb_all} MB)")
+                            last_edit = time.time()
 
             if media_type == "video":
                 # Extract exact metadata with native ffprobe
@@ -238,6 +251,8 @@ def handle_text(chat_id, text, message_id=None):
 
                 # Deliver video directly to chat!
                 send_video(chat_id, str(local_path), video_caption, action_keyboard)
+                if prog_id:
+                    tg_request("deleteMessage", {"chat_id": chat_id, "message_id": prog_id})
 
                 # Save file state
                 state_mgr.set_user_state(chat_id, "video_delivered", {
