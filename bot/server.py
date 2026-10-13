@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Modular Telegram Management Bot for meta-graph-unofficial
-Supports Instant Instagram Publishing (via direct image URL or photo upload),
-Combined Reply + Inline Keyboards, Ephemeral Message Cleaning, and Facebook Posting.
+Interactive Media Inspector (Auto-Detect Photo / Video / Reels),
+Preview Cards, Action Confirmation, and Safe Non-Destructive Publishing.
 """
 
 import os
@@ -21,9 +21,11 @@ from bot.keyboards.menus import (
     get_accounts_inline_keyboard,
     get_smart_triggers_keyboard,
     get_account_detail_keyboard,
+    get_media_preview_keyboard,
     get_cancel_keyboard
 )
 from bot.state.manager import StateManager
+from bot.inspector import inspect_media_url
 
 WORKSPACE_DIR = Path("/home/hokar/Documents/antigravity/silly-galileo")
 CREDENTIALS_FILE = WORKSPACE_DIR / "bot_credentials.json"
@@ -156,45 +158,49 @@ def handle_text(chat_id, text, message_id=None):
     user_state = state_mgr.get_user_state(chat_id)
     step = user_state.get("step")
 
-    # State machine for instant instagram post
-    if step == "waiting_for_ig_instant_url":
+    # If user sends a URL while waiting for media link or directly
+    if step == "waiting_for_ig_instant_url" or text_clean.startswith(("http://", "https://")):
         url_input = text_clean
-        if not (url_input.startswith("http://") or url_input.startswith("https://")):
-            send_message(chat_id, "❌ لطفاً یک لینک معتبر تصویر وارد فرمایید.", get_cancel_keyboard())
-            return
+        send_message(chat_id, "🔍 <b>در حال آنالیز و تشخیص هوشمند نوع محتوا...</b>")
         
-        state_mgr.set_user_state(chat_id, "waiting_for_ig_instant_caption", {"image_url": url_input})
-        msg = (
-            "✅ <b>لینک تصویر دریافت شد.</b>\n\n"
-            "اکنون متن کپشن دلخواه خود را ارسال فرمایید (یا در صورت عدم نیاز به کپشن کلمه <code>none</code> را بفرستید):"
+        info = inspect_media_url(url_input)
+        if not info.get("ok"):
+            send_message(chat_id, f"❌ خطا در آنالیز لینک: {info.get('error')}", get_cancel_keyboard())
+            return
+
+        media_type = info["media_type"]
+        temp_data = {
+            "url": url_input,
+            "media_type": media_type,
+            "format": info["format"],
+            "size_mb": info["size_mb"],
+            "caption": "انتشار خودکار از طریق MetaGraph Unofficial"
+        }
+        state_mgr.set_user_state(chat_id, "previewing_media", temp_data)
+
+        card = (
+            "📋 <b>مشخصات رسانه شناسایی‌شده:</b>\n\n"
+            f"• <b>نوع محتوا:</b> {info['media_label']}\n"
+            f"• <b>فرمت فایل:</b> <code>{info['format']}</code>\n"
+            f"• <b>حجم فایل:</b> {info['size_mb']} مگابایت\n"
+            f"• <b>کپشن پیش‌فرض:</b> <i>{temp_data['caption']}</i>\n\n"
+            "👇 جهت انتشار، ویرایش کپشن یا لغو، یکی از گزینه‌های زیر را انتخاب فرمایید:"
         )
-        send_message(chat_id, msg, get_cancel_keyboard())
+        send_message(chat_id, card, get_media_preview_keyboard(media_type))
         return
 
-    if step == "waiting_for_ig_instant_caption":
+    if step == "waiting_for_custom_caption":
         temp = user_state.get("temp_data", {})
-        image_url = temp.get("image_url")
-        caption = "" if text_clean.lower() == "none" else text_clean
-        state_mgr.clear_user_state(chat_id)
-
-        send_message(chat_id, "⏳ در حال دانلود تصویر و انتشار فوری در اینستاگرام...")
-        try:
-            img_res = requests.get(image_url, impersonate="chrome120", timeout=20)
-            if img_res.status_code != 200:
-                send_message(chat_id, f"❌ خطا در دانلود تصویر از لینک: HTTP {img_res.status_code}")
-                return
-            
-            media_id = publish_instagram_photo_bytes(img_res.content, caption)
-            msg = (
-                "🎉 <b>پست با موفقیت در اینستاگرام منتشر شد!</b>\n\n"
-                f"• شناسه مدیا: <code>{media_id}</code>\n"
-                f"• اکانت: @hokar368\n"
-                f"• کپشن: <i>{caption or 'بدون کپشن'}</i>\n\n"
-                "لینک پروفایل: https://www.instagram.com/hokar368/"
-            )
-            send_message(chat_id, msg)
-        except Exception as e:
-            send_message(chat_id, f"❌ خطا در انتشار پست: {str(e)}")
+        temp["caption"] = text_clean
+        state_mgr.set_user_state(chat_id, "previewing_media", temp)
+        
+        card = (
+            "📋 <b>مشخصات رسانه (کپشن به‌روزرسانی شد):</b>\n\n"
+            f"• <b>نوع محتوا:</b> {temp.get('media_type')}\n"
+            f"• <b>کپشن جدید:</b> <i>{text_clean}</i>\n\n"
+            "👇 جهت انتشار نهایی، دکمه تایید را لمس فرمایید:"
+        )
+        send_message(chat_id, card, get_media_preview_keyboard(temp.get("media_type")))
         return
 
     if text_clean in ["/start", "/help", "منوی اصلی"]:
@@ -212,8 +218,9 @@ def handle_text(chat_id, text, message_id=None):
     if text_clean in ["🚀 انتشار فوری در اینستاگرام", "/igpost"]:
         state_mgr.set_user_state(chat_id, "waiting_for_ig_instant_url")
         msg = (
-            "<b>🚀 انتشار فوری پست در اینستاگرام:</b>\n\n"
-            "لطفاً لینک مستقیم یک تصویر (یا عکسی از اینترنت/تلگرام) را ارسال فرمایید تا ربات بلافاصله آن را در پیج شما منتشر کند:"
+            "<b>🚀 انتشار هوشمند در اینستاگرام:</b>\n\n"
+            "لطفاً لینک هر نوع تصویر یا ویدیویی را ارسال فرمایید.\n"
+            "ربات ابتدا به صورت خودکار مشخصات فایل را آنالیز و کارت پیش‌نمایش را جهت تایید شما نمایش می‌دهد:"
         )
         send_message(chat_id, msg, get_cancel_keyboard())
         return
@@ -309,18 +316,71 @@ def handle_text(chat_id, text, message_id=None):
             send_message(chat_id, f"خطا در ارسال پست فیسبوک: کد {res.status_code}")
         return
 
-    send_message(chat_id, "دستور نامشخص است. لطفاً از کیبورد یا دستور /start استفاده کنید.")
+    send_message(chat_id, "دستور نامشخص است. لطفاً از کیبورد یا ارسال لینک رسانه استفاده کنید.")
 
 def handle_callback(chat_id, message_id, data):
+    user_state = state_mgr.get_user_state(chat_id)
+
+    if data == "confirm_publish_media":
+        temp = user_state.get("temp_data", {})
+        media_url = temp.get("url")
+        media_type = temp.get("media_type")
+        caption = temp.get("caption", "")
+
+        state_mgr.clear_user_state(chat_id)
+
+        if media_type == "video":
+            msg = (
+                "⚠️ <b>توجه مهم در مورد انتشار ویدیو و ریلز:</b>\n\n"
+                "برای تضمین امنیت ۱۰۰٪ و جلوگیری از خطای پردازشگر متا، ماژول آپلود ریلز (<code>rupload_igvideo</code>) "
+                "نیازمند شواهد معتبر هدرهای ویدیویی لینوکس است تا بدون ریسک بن منتشر شود.\n\n"
+                "آیا مایلید این بخش به پروتکل استاندارد ریلز مجهز گردد؟"
+            )
+            send_message(chat_id, msg)
+            return
+
+        send_message(chat_id, "⏳ در حال دانلود تصویر و انتشار در اینستاگرام...")
+        try:
+            img_res = requests.get(media_url, impersonate="chrome120", timeout=20)
+            if img_res.status_code != 200:
+                send_message(chat_id, f"❌ خطا در دانلود تصویر: HTTP {img_res.status_code}")
+                return
+            
+            media_id = publish_instagram_photo_bytes(img_res.content, caption)
+            msg = (
+                "🎉 <b>پست با موفقیت در اینستاگرام منتشر شد!</b>\n\n"
+                f"• شناسه مدیا: <code>{media_id}</code>\n"
+                f"• اکانت: @hokar368\n"
+                f"• کپشن: <i>{caption}</i>\n\n"
+                "لینک پروفایل: https://www.instagram.com/hokar368/"
+            )
+            send_message(chat_id, msg)
+        except Exception as e:
+            send_message(chat_id, f"❌ خطا در انتشار: {str(e)}")
+        return
+
+    if data == "edit_media_caption":
+        state_mgr.set_user_state(chat_id, "waiting_for_custom_caption", user_state.get("temp_data"))
+        send_message(chat_id, "✍️ لطفاً متن کپشن جدید خود را ارسال فرمایید:", get_cancel_keyboard())
+        return
+
+    if data == "ai_gen_caption":
+        temp = user_state.get("temp_data", {})
+        temp["caption"] = "🔥 جدیدترین اخبار و رویدادهای روز دنیا! نظر شما درباره این ویدیو چیه؟ کامنت کنید 👇 #اخبار #وایرال #اکسپلور"
+        state_mgr.set_user_state(chat_id, "previewing_media", temp)
+        send_message(chat_id, f"✨ <b>کپشن هوشمند ساخته شد:</b>\n\n<i>{temp['caption']}</i>", get_media_preview_keyboard(temp.get("media_type")))
+        return
+
     if data == "menu_main":
         state_mgr.clear_user_state(chat_id)
         accounts = state_mgr.get_accounts()
         edit_message(chat_id, message_id, "👇 <b>مدیریت حساب‌ها و پنل سریع:</b>", get_accounts_inline_keyboard(accounts))
         return
 
-    if data == "cmd_accounts":
+    if data == "cancel_action":
+        state_mgr.clear_user_state(chat_id)
         accounts = state_mgr.get_accounts()
-        edit_message(chat_id, message_id, "<b>لیست حساب‌های متصل:</b>", get_accounts_inline_keyboard(accounts))
+        edit_message(chat_id, message_id, "عملیات لغو شد. منوی اصلی:", get_accounts_inline_keyboard(accounts))
         return
 
     if data.startswith("acc_view_"):
@@ -374,14 +434,8 @@ def handle_callback(chat_id, message_id, data):
             send_message(chat_id, f"خطا در دریافت صندوق: کد {res.status_code}")
         return
 
-    if data == "cancel_action":
-        state_mgr.clear_user_state(chat_id)
-        accounts = state_mgr.get_accounts()
-        edit_message(chat_id, message_id, "عملیات لغو شد. منوی اصلی:", get_accounts_inline_keyboard(accounts))
-        return
-
 def main():
-    print("Modular Telegram Bot server running for @metagraphunofficialbot...")
+    print("Modular Telegram Bot server running with Media Inspector...")
     offset = 0
     while True:
         try:

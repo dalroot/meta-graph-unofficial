@@ -39,6 +39,23 @@ def get_accounts_inline_keyboard(accounts):
     ])
     return {"inline_keyboard": inline}
 
+def get_media_preview_keyboard(media_type):
+    btn_label = "🚀 تایید و انتشار ریلز" if media_type == "video" else "🚀 تایید و انتشار پست"
+    return {
+        "inline_keyboard": [
+            [
+                {"text": btn_label, "callback_data": "confirm_publish_media"}
+            ],
+            [
+                {"text": "✍️ ویرایش کپشن", "callback_data": "edit_media_caption"},
+                {"text": "✨ کپشن هوش مصنوعی", "callback_data": "ai_gen_caption"}
+            ],
+            [
+                {"text": "❌ انصراف و لغو", "callback_data": "cancel_action"}
+            ]
+        ]
+    }
+
 def get_smart_triggers_keyboard():
     return {
         "inline_keyboard": [
