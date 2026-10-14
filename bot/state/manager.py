@@ -4,6 +4,7 @@ User Conversation State & Account Registry Manager
 
 import json
 import os
+from pathlib import Path
 
 DEFAULT_DATA_DIR = Path("/var/www/meta-graph-unofficial/data") if Path("/var/www/meta-graph-unofficial/data").exists() else Path("/home/hokar/Documents/antigravity/silly-galileo")
 WORKSPACE_DIR = Path(os.environ.get("METAGRAPH_DATA_DIR", str(DEFAULT_DATA_DIR)))
