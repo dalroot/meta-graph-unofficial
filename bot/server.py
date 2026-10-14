@@ -11,8 +11,14 @@ import os
 import sys
 import json
 import time
+import socket
 import subprocess
 from pathlib import Path
+import urllib3.util.connection as urllib3_cn
+
+# Force IPv4 resolution to eliminate IPv6 network unreachable stalls on Linux servers
+urllib3_cn.allowed_gai_family = lambda: socket.AF_INET
+
 import requests as std_requests
 from curl_cffi import requests
 
@@ -825,7 +831,7 @@ def main():
     offset = 0
     while True:
         try:
-            updates = tg_request(f"getUpdates?offset={offset}&timeout=25")
+            updates = tg_request(f"getUpdates?offset={offset}&timeout=15")
             if updates.get("ok"):
                 for u in updates.get("result", []):
                     offset = u["update_id"] + 1
