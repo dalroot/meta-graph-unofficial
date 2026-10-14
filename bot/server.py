@@ -32,7 +32,8 @@ from bot.keyboards.menus import (
 from bot.state.manager import StateManager
 from bot.inspector import inspect_media_url, get_exact_video_metadata
 
-WORKSPACE_DIR = Path("/home/hokar/Documents/antigravity/silly-galileo")
+DEFAULT_DATA_DIR = Path("/var/www/meta-graph-unofficial/data") if Path("/var/www/meta-graph-unofficial/data").exists() else Path("/home/hokar/Documents/antigravity/silly-galileo")
+WORKSPACE_DIR = Path(os.environ.get("METAGRAPH_DATA_DIR", str(DEFAULT_DATA_DIR)))
 CREDENTIALS_FILE = WORKSPACE_DIR / "bot_credentials.json"
 IG_SESSION_FILE = WORKSPACE_DIR / "instagram_session.json"
 FB_SESSION_FILE = WORKSPACE_DIR / "facebook_session.json"

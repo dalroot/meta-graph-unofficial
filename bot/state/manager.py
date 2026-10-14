@@ -3,9 +3,10 @@ User Conversation State & Account Registry Manager
 """
 
 import json
-from pathlib import Path
+import os
 
-WORKSPACE_DIR = Path("/home/hokar/Documents/antigravity/silly-galileo")
+DEFAULT_DATA_DIR = Path("/var/www/meta-graph-unofficial/data") if Path("/var/www/meta-graph-unofficial/data").exists() else Path("/home/hokar/Documents/antigravity/silly-galileo")
+WORKSPACE_DIR = Path(os.environ.get("METAGRAPH_DATA_DIR", str(DEFAULT_DATA_DIR)))
 ACCOUNTS_DB = WORKSPACE_DIR / "accounts_db.json"
 
 class StateManager:
