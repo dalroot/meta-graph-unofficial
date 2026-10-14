@@ -9,3 +9,5 @@ credentials.json
 local/
 .DS_Store
 engine/bin/
+__pycache__/
+*.pyc

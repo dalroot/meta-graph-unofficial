@@ -132,36 +132,33 @@ def format_media_card(meta, size_mb, caption_text):
         clean_cap = clean_cap[:280] + "..."
 
     return (
-        "🎬 <b>رسانه با کیفیت اصلی استخراج و آماده شد</b>\n"
+        "🎬 <b>ویدیو با موفقیت دریافت شد</b>\n"
         "───────────────────────\n"
-        f"⏱️ <b>مدت زمان ویدیو:</b> <code>{duration_str} ({sec} ثانیه)</code>\n"
-        f"📐 <b>ابعاد تصویر:</b> <code>{meta.get('width', 1080)} × {meta.get('height', 1920)}</code>\n"
-        f"📦 <b>حجم فایل دریافتی:</b> <code>{size_mb} مگابایت</code>\n"
-        f"🎞️ <b>کدک و پروفایل:</b> <code>H.264 / AAC Stereo (FastStart)</code>\n"
+        f"⏱️ <b>مدت زمان:</b> <code>{duration_str} ({sec} ثانیه)</code>\n"
+        f"📐 <b>ابعاد:</b> <code>{meta.get('width', 1080)} × {meta.get('height', 1920)}</code>\n"
+        f"📦 <b>حجم فایل:</b> <code>{size_mb} مگابایت</code>\n"
         "───────────────────────\n"
-        f"📝 <b>کپشن استخراج‌شده:</b>\n<blockquote>{clean_cap}</blockquote>\n"
+        f"📝 <b>کپشن اصلی:</b>\n<blockquote>{clean_cap}</blockquote>\n"
         "───────────────────────\n"
-        "👇 <i>عملیات مورد نظر خود را برای این رسانه انتخاب فرمایید:</i>"
+        "👇 <i>عملیات مورد نظر خود را انتخاب کنید:</i>"
     )
 
 def format_publish_stepper(step, total_steps=4, current_info=""):
     steps = [
-        ("استخراج فریم پوستر با ffmpeg", 1),
-        ("ثبت تصویر کاور در rupload_igphoto", 2),
-        ("انتقال باینری ویدیو به سرورهای متا (RUpload)", 3),
-        ("پیکربندی ترنسکدینگ و انتشار قطعی در پیج", 4)
+        ("آماده‌سازی تصویر کاور", 1),
+        ("ثبت اطلاعات کاور در اینستاگرام", 2),
+        ("ارسال داده‌های ویدیو به سرور", 3),
+        ("انتشار نهایی در پیج شما", 4)
     ]
-    lines = ["🚀 <b>فرآیند انتشار در جریان است...</b>", "───────────────────────"]
+    lines = ["⏳ <b>در حال انتشار رسانه در اینستاگرام (@hokar368)...</b>\n"]
     for title, num in steps:
         if num < step:
-            lines.append(f"✅ <b>[{num}/{total_steps}]</b> {title}")
+            lines.append(f"✅ {title}")
         elif num == step:
-            lines.append(f"⏳ <b>[{num}/{total_steps}]</b> {title}...")
+            lines.append(f"⏳ {title}...")
         else:
-            lines.append(f"⬜ <b>[{num}/{total_steps}]</b> {title}")
-    lines.append("───────────────────────")
-    if current_info:
-        lines.append(f"ℹ️ <i>{current_info}</i>")
+            lines.append(f"▫️ {title}")
+    lines.append("\n<i>لطفاً چند لحظه شکیبا باشید...</i>")
     return "\n".join(lines)
 
 def format_publish_success(media_id, username, caption):
@@ -173,7 +170,7 @@ def format_publish_success(media_id, username, caption):
         "───────────────────────\n"
         f"👤 <b>حساب مقصد:</b> @{username}\n"
         f"🆔 <b>شناسه مدیا (Media ID):</b> <code>{media_id}</code>\n"
-        f"🛡️ <b>استاندارد مهندسی معکوس:</b> <code>REA Verified (Status 200)</code>\n"
+        f"🛡️ <b>وضعیت انتشار:</b> <code>تایید شده (موفق)</code>\n"
         "───────────────────────\n"
         f"📝 <b>کپشن نهایی:</b>\n<blockquote>{clean_cap}</blockquote>\n"
         "───────────────────────\n"
@@ -271,9 +268,22 @@ def publish_instagram_video_file(video_path, caption="", status_cb=None):
     upload_id = str(int(time.time() * 1000))
     meta = get_exact_video_metadata(video_path)
 
+    # REA Video Duration Hard-Limit (Instagram Web requires <= 90s for reels/clips)
+    if meta.get("duration_sec", 0) > 90.0:
+        if status_cb:
+            status_cb(1, "تنظیم هوشمند مدت زمان ویدیو (۹۰ ثانیه)...")
+        trimmed_path = Path(video_path).parent / f"trim90_{Path(video_path).name}"
+        subprocess.run(
+            ["ffmpeg", "-y", "-ss", "0", "-i", str(video_path), "-t", "89.5", "-c", "copy", "-movflags", "+faststart", str(trimmed_path)],
+            check=True,
+            capture_output=True
+        )
+        video_path = str(trimmed_path)
+        meta = get_exact_video_metadata(video_path)
+
     # Stage 1: Extract Cover Frame
     if status_cb:
-        status_cb(1, "استخراج فریم ۰ با ffmpeg به عنوان کاور رسمی...")
+        status_cb(1, "آماده‌سازی تصویر کاور ویدیو...")
     
     cover_path = Path(video_path).parent / f"cover_{upload_id}.jpg"
     try:
@@ -287,7 +297,7 @@ def publish_instagram_video_file(video_path, caption="", status_cb=None):
 
     # Stage 2: Upload Cover Photo
     if status_cb:
-        status_cb(2, "بارگذاری فریم پوستر در rupload_igphoto...")
+        status_cb(2, "ثبت کاور در سرور اینستاگرام...")
     
     if cover_path.exists():
         with open(cover_path, "rb") as f:
@@ -316,7 +326,7 @@ def publish_instagram_video_file(video_path, caption="", status_cb=None):
 
     # Stage 3: Upload Video Binary
     if status_cb:
-        status_cb(3, f"انتقال داده‌های ویدیویی به سرورهای متا ({round(os.path.getsize(video_path)/(1024*1024), 1)} MB)...")
+        status_cb(3, f"ارسال داده‌های ویدیو به سرور ({round(os.path.getsize(video_path)/(1024*1024), 1)} MB)...")
 
     with open(video_path, "rb") as f:
         video_bytes = f.read()
@@ -351,7 +361,7 @@ def publish_instagram_video_file(video_path, caption="", status_cb=None):
 
     # Stage 4: Wait for Ingestion & Configure
     if status_cb:
-        status_cb(4, "انتظار ترنسکد سرور و فراخوانی نهایی پیکربندی...")
+        status_cb(4, "پردازش نهایی و انتشار در پیج...")
     time.sleep(6.0)
 
     conf_headers = headers.copy()
@@ -447,12 +457,12 @@ def handle_text(chat_id, text, message_id=None):
     if step == "waiting_for_ig_instant_url" or text_clean.startswith(("http://", "https://")):
         state_mgr.clear_user_state(chat_id)
         url_input = text_clean
-        prog_msg = send_message(chat_id, "📡 <b>[۱/۳] اتصال به CDN متا و استخراج استریم رسانه...</b>")
+        prog_msg = send_message(chat_id, "📡 <b>[۱/۳] در حال بررسی و دریافت اطلاعات رسانه...</b>")
         prog_id = prog_msg.get("result", {}).get("message_id")
 
         info = inspect_media_url(url_input)
         if not info.get("ok"):
-            err_msg = f"❌ <b>خطا در آنالیز لینک:</b> {info.get('error', 'عدم دسترسی به رسانه')}"
+            err_msg = f"❌ <b>خطا در دریافت رسانه:</b> {info.get('error', 'عدم دسترسی به رسانه')}"
             if prog_id:
                 edit_message(chat_id, prog_id, err_msg, get_cancel_keyboard())
             else:
@@ -467,9 +477,9 @@ def handle_text(chat_id, text, message_id=None):
             edit_message(
                 chat_id,
                 prog_id,
-                f"📥 <b>[۲/۳] در حال بارگیری قطعه‌به‌قطعه رسانه ({size_mb} MB)...</b>\n"
+                f"📥 <b>[۲/۳] در حال دانلود رسانه ({size_mb} مگابایت)...</b>\n"
                 f"<code>[░░░░░░░░░░] 0%</code> (0 / {size_mb} MB)\n"
-                f"<i>لطفاً چند لحظه شکیبا باشید.</i>"
+                f"<i>لطفاً چند لحظه شکیبا باشید...</i>"
             )
 
         local_file_name = f"reel_{int(time.time())}.mp4" if media_type == "video" else f"photo_{int(time.time())}.jpg"
@@ -494,18 +504,18 @@ def handle_text(chat_id, text, message_id=None):
                             edit_message(
                                 chat_id,
                                 prog_id,
-                                f"📥 <b>[۲/۳] در حال دریافت رسانه با سرعت بالا...</b>\n\n"
-                                f"پیشرفت بارگیری: {pct_bar} ({mb_done}/{mb_all} MB)\n"
-                                f"<i>در حال انتقال به حافظه موقت...</i>"
+                                f"📥 <b>[۲/۳] در حال دانلود رسانه...</b>\n\n"
+                                f"پیشرفت دریافت: {pct_bar} ({mb_done}/{mb_all} MB)\n"
+                                f"<i>لطفاً چند لحظه شکیبا باشید...</i>"
                             )
                             last_edit = time.time()
 
             if media_type == "video":
                 meta = get_exact_video_metadata(local_path)
-                caption_text = info.get("caption") or "دانلود شده از طریق MetaGraph Unofficial"
+                caption_text = info.get("caption") or "دانلود شده با MetaGraph"
 
                 if prog_id:
-                    edit_message(chat_id, prog_id, "📤 <b>[۳/۳] در حال انتقال ویدیو به محیط چت تلگرام شما...</b>")
+                    edit_message(chat_id, prog_id, "📤 <b>[۳/۳] در حال ارسال فایل به تلگرام شما...</b>")
 
                 video_caption = format_media_card(meta, size_mb, caption_text)
                 action_keyboard = get_media_action_keyboard(local_file_name, "video", "@hokar368")
