@@ -112,6 +112,121 @@ def send_video(chat_id, video_path, caption="", reply_markup=None):
         return {"ok": False, "error": str(e)}
 
 # ==========================================
+# Anti-Ban Circuit Breaker & Safety Engine
+# ==========================================
+
+CIRCUIT_BREAKER_FILE = WORKSPACE_DIR / "circuit_breaker.json"
+OFFSET_FILE = WORKSPACE_DIR / "last_update_offset.txt"
+LAST_ALERT_TIME = 0
+
+class InstagramChallengeException(Exception):
+    pass
+
+class CircuitBreaker:
+    @staticmethod
+    def is_tripped():
+        if not CIRCUIT_BREAKER_FILE.exists():
+            return False, ""
+        try:
+            with open(CIRCUIT_BREAKER_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if data.get("tripped"):
+                return True, data.get("reason", "چالش امنیتی ناشناخته")
+        except Exception:
+            pass
+        return False, ""
+
+    @staticmethod
+    def trip(reason, details=""):
+        data = {
+            "tripped": True,
+            "reason": reason,
+            "details": str(details)[:300],
+            "tripped_at": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        with open(CIRCUIT_BREAKER_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        print(f"🛑 [CIRCUIT BREAKER TRIPPED] {reason} - {details}", flush=True)
+
+    @staticmethod
+    def reset():
+        if CIRCUIT_BREAKER_FILE.exists():
+            try:
+                CIRCUIT_BREAKER_FILE.unlink(missing_ok=True)
+            except Exception:
+                pass
+        print("✅ [CIRCUIT BREAKER RESET] System normal", flush=True)
+
+def alert_admin_circuit_breaker(reason, action_name):
+    global LAST_ALERT_TIME
+    now = time.time()
+    # Anti-Spam: Never send more than ONE alert per 15 minutes!
+    if now - LAST_ALERT_TIME < 900:
+        return
+    LAST_ALERT_TIME = now
+    
+    msg = (
+        "🛑 <b>ترمز اضطراری ضد بن فعال شد (Anti-Ban Circuit Breaker)</b>\n"
+        "───────────────────────\n"
+        f"<b>دلیل فعال‌سازی:</b> {reason}\n"
+        f"<b>عملیات:</b> {action_name}\n"
+        "───────────────────────\n"
+        "🛡️ <b>اقدام محافظتی خودکار:</b>\n"
+        "برای پیشگیری قطعی از بلاک یا جریمه شدن پیج، کلیه درخواست‌های خودکار به اینستاگرام <b>فوراً متوقف و قفل شد</b>.\n\n"
+        "📲 <b>اقدام مورد نیاز شما:</b>\n"
+        "۱. در گوشی خود وارد اپلیکیشن اینستاگرام شوید.\n"
+        "۲. پیام تایید هویت («Confirm you're human» یا «This was me») را تایید فرمایید.\n"
+        "۳. پس از باز شدن پیج، دکمه ریست زیر را بزنید تا فعالیت ربات از سر گرفته شود:"
+    )
+    markup = {
+        "inline_keyboard": [
+            [{"text": "🔄 ریست فیوز و بازگشایی ربات", "callback_data": "reset_circuit_breaker"}],
+            [{"text": "🏠 منوی اصلی", "callback_data": "menu_main"}]
+        ]
+    }
+    admin_list = config.get("admin_telegram_ids", [748300418, 8629398713])
+    for admin_id in admin_list:
+        try:
+            send_message(admin_id, msg, markup)
+        except Exception:
+            pass
+
+def check_instagram_response(res, action_name="Instagram Request"):
+    status = res.status_code
+    text = ""
+    try:
+        text = res.text
+    except Exception:
+        pass
+
+    triggers = [
+        "checkpoint_required",
+        "challenge_required",
+        "feedback_required",
+        "login_required",
+        "Confirm you're human",
+        "sentry_block",
+        "action_blocked",
+        "Please wait a few minutes",
+        "two_factor_required"
+    ]
+
+    for t in triggers:
+        if t in text:
+            reason = f"چالش امنیتی اینستاگرام صادر شد ({t})"
+            CircuitBreaker.trip(reason, f"HTTP {status} at {action_name}: {text[:150]}")
+            alert_admin_circuit_breaker(reason, action_name)
+            raise InstagramChallengeException(reason)
+
+    if status in [429, 403]:
+        reason = f"محدودیت دسترسی اینستاگرام (HTTP {status})"
+        CircuitBreaker.trip(reason, f"HTTP {status} at {action_name}")
+        alert_admin_circuit_breaker(reason, action_name)
+        raise InstagramChallengeException(reason)
+
+    return res
+
+# ==========================================
 # UI Helpers & Visual Cards
 # ==========================================
 
@@ -271,6 +386,15 @@ def get_ig_headers():
 # ==========================================
 
 def publish_instagram_video_file(video_path, caption="", status_cb=None):
+    tripped, reason = CircuitBreaker.is_tripped()
+    if tripped:
+        raise RuntimeError(
+            f"🛑 <b>سیستم به دلیل چالش امنیتی اینستاگرام متوقف شده است:</b>\n"
+            f"<code>{reason}</code>\n\n"
+            f"🛡️ برای جلوگیری از بلاک یا جریمه، ارسال درخواست‌ها قفل است.\n"
+            f"لطفاً ابتدا چالش را در اپلیکیشن اینستاگرام تایید نموده و سپس دکمه ریست فیوز را انتخاب فرمایید."
+        )
+
     headers = get_ig_headers()
     upload_id = str(int(time.time() * 1000))
     meta = get_exact_video_metadata(video_path)
@@ -328,6 +452,7 @@ def publish_instagram_video_file(video_path, caption="", status_cb=None):
             impersonate="chrome120",
             timeout=35
         )
+        check_instagram_response(res_cover, "آپلود تصویر کاور")
         if res_cover.status_code != 200:
             print(f"Cover upload warning: {res_cover.status_code}", flush=True)
 
@@ -363,6 +488,7 @@ def publish_instagram_video_file(video_path, caption="", status_cb=None):
         impersonate="chrome120",
         timeout=180
     )
+    check_instagram_response(res_up, "آپلود باینری ویدیو")
     if res_up.status_code != 200:
         raise RuntimeError(f"Video upload failed: HTTP {res_up.status_code} - {res_up.text[:150]}")
 
@@ -399,6 +525,7 @@ def publish_instagram_video_file(video_path, caption="", status_cb=None):
             timeout=45
         )
 
+    check_instagram_response(res_conf, "انتشار و پیکربندی ریلز")
     if res_conf.status_code != 200:
         raise RuntimeError(f"Video configure failed: HTTP {res_conf.status_code} - {res_conf.text[:150]}")
 
@@ -813,6 +940,17 @@ def handle_callback(chat_id, message_id, data):
         edit_message(chat_id, message_id, "عملیات متوقف شد. می‌توانید از دکمه‌های زیر استفاده نمایید:")
         return
 
+    if data == "reset_circuit_breaker":
+        CircuitBreaker.reset()
+        edit_message(
+            chat_id,
+            message_id,
+            "✅ <b>فیوز ایمنی ضد بن با موفقیت ریست شد.</b>\n\n"
+            "محدودیت موقت برداشته شد و ربات در حالت عادی و آماده به کار قرار گرفت.",
+            get_main_reply_keyboard()
+        )
+        return
+
     if data in ["trig_comment_keyword", "trig_dm_response", "trig_story_mention", "ai_caption_wizard"]:
         send_message(
             chat_id,
@@ -829,29 +967,51 @@ def handle_callback(chat_id, message_id, data):
 def main():
     print("MetaGraph Unofficial Commercial Bot Daemon Started [Unbuffered]", flush=True)
     offset = 0
+    if OFFSET_FILE.exists():
+        try:
+            offset = int(OFFSET_FILE.read_text().strip())
+        except Exception:
+            offset = 0
+
+    backoff = 1
     while True:
         try:
             updates = tg_request(f"getUpdates?offset={offset}&timeout=15")
             if updates.get("ok"):
+                backoff = 1
                 for u in updates.get("result", []):
                     offset = u["update_id"] + 1
-                    if "message" in u and "text" in u["message"]:
-                        chat_id = u["message"]["chat"]["id"]
-                        msg_id = u["message"]["message_id"]
-                        text = u["message"]["text"]
-                        print(f"Message from {chat_id}: {text}", flush=True)
-                        handle_text(chat_id, text, msg_id)
-                    elif "callback_query" in u:
-                        cq = u["callback_query"]
-                        chat_id = cq["message"]["chat"]["id"]
-                        msg_id = cq["message"]["message_id"]
-                        cb_data = cq.get("data", "")
-                        print(f"Callback from {chat_id}: {cb_data}", flush=True)
-                        handle_callback(chat_id, msg_id, cb_data)
+                    try:
+                        OFFSET_FILE.write_text(str(offset))
+                    except Exception:
+                        pass
+
+                    try:
+                        if "message" in u and "text" in u["message"]:
+                            chat_id = u["message"]["chat"]["id"]
+                            msg_id = u["message"]["message_id"]
+                            text = u["message"]["text"]
+                            print(f"Message from {chat_id}: {text}", flush=True)
+                            handle_text(chat_id, text, msg_id)
+                        elif "callback_query" in u:
+                            cq = u["callback_query"]
+                            chat_id = cq["message"]["chat"]["id"]
+                            msg_id = cq["message"]["message_id"]
+                            cb_data = cq.get("data", "")
+                            print(f"Callback from {chat_id}: {cb_data}", flush=True)
+                            handle_callback(chat_id, msg_id, cb_data)
+                    except InstagramChallengeException as ce:
+                        print(f"[Security Guard] Instagram challenge caught and contained: {ce}", flush=True)
+                    except Exception as handler_err:
+                        print(f"[Handler Error Protected] {handler_err}", flush=True)
+            else:
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 30)
             time.sleep(0.3)
         except Exception as e:
             print(f"Loop error: {e}", flush=True)
-            time.sleep(3)
+            time.sleep(backoff)
+            backoff = min(backoff * 2, 30)
 
 if __name__ == "__main__":
     main()
