@@ -2,6 +2,7 @@
 Digital Twin Engine for MetaGraph Unofficial
 Provides comprehensive hardware cloning, dynamic OS telemetry,
 and anti-ban signal synthesis based on real physical device observations.
+Target Physical Device: Xiaomi Redmi Note 13 4G (23129RAA4G / sapphire / SM6225).
 """
 
 from digital_twin.profile import DeviceProfile
@@ -9,12 +10,29 @@ from digital_twin.signals import SignalSimulator
 from digital_twin.headers import HeaderFactory
 from digital_twin.attestation import AttestationEngine
 
+# Modular Device Specifications
+from digital_twin.devices.xiaomi_redmi_note_13.spec import REDMI_NOTE_13_SPEC
+
+# Modular App Ecosystem
+from digital_twin.apps.instagram.user_agent import (
+    build_instagram_app_user_agent,
+    build_instagram_webview_user_agent,
+    get_instagram_client_headers
+)
+from digital_twin.apps.instagram.graphql_catalog import INSTAGRAM_GRAPHQL_OPERATIONS
+from digital_twin.apps.instagram.composer_codecs import INSTAGRAM_MEDIA_COMPOSER_SPEC
+from digital_twin.apps.threads.profile import THREADS_INTEGRATION_SPEC
+from digital_twin.apps.facebook.profile import FACEBOOK_INTEGRATION_SPEC
+from digital_twin.apps.whatsapp.profile import WHATSAPP_LINKING_SPEC
+from digital_twin.apps.spotify.profile import SPOTIFY_LINKING_SPEC
+
 class DigitalTwin:
     def __init__(self, profile_file=None):
         self.profile = DeviceProfile()
         self.simulator = SignalSimulator()
         self.headers = HeaderFactory(self.profile, self.simulator)
         self.attestation = AttestationEngine(self.profile, self.simulator)
+        self.spec = REDMI_NOTE_13_SPEC
 
     @property
     def identity(self) -> str:
@@ -45,5 +63,15 @@ __all__ = [
     "DeviceProfile",
     "SignalSimulator",
     "HeaderFactory",
-    "AttestationEngine"
+    "AttestationEngine",
+    "REDMI_NOTE_13_SPEC",
+    "build_instagram_app_user_agent",
+    "build_instagram_webview_user_agent",
+    "get_instagram_client_headers",
+    "INSTAGRAM_GRAPHQL_OPERATIONS",
+    "INSTAGRAM_MEDIA_COMPOSER_SPEC",
+    "THREADS_INTEGRATION_SPEC",
+    "FACEBOOK_INTEGRATION_SPEC",
+    "WHATSAPP_LINKING_SPEC",
+    "SPOTIFY_LINKING_SPEC"
 ]
