@@ -11,3 +11,6 @@ local/
 engine/bin/
 __pycache__/
 *.pyc
+evidence/raw_telemetry/
+*.tar.gz
+*.log
