@@ -1,0 +1,47 @@
+{
+  "provenance": "REA Hardware Observation via ADB (1121b522)",
+  "extracted_at": "2026-10-17T00:05:00+03:30",
+  "device": {
+    "brand": "Redmi",
+    "manufacturer": "Xiaomi",
+    "model": "23129RAA4G",
+    "device_code": "sapphire",
+    "product": "sapphire_global",
+    "board": "bengal",
+    "soc_model": "SM6225",
+    "chipset": "qcom",
+    "android_id": "556f8db9eada6d9c"
+  },
+  "os": {
+    "release": "15",
+    "sdk_int": 35,
+    "build_id": "AQ3A.240829.003",
+    "security_patch": "2026-08-01",
+    "fingerprint": "Redmi/sapphire_global/sapphire:15/AQ3A.240829.003/OS2.0.213.0.VNGMIXM:user/release-keys",
+    "locale": "en_US",
+    "cpu_abi": ["arm64-v8a", "armeabi-v7a", "armeabi"]
+  },
+  "display": {
+    "resolution": "1080x2400",
+    "density_dpi": 440,
+    "width": 1080,
+    "height": 2400
+  },
+  "installed_apps": {
+    "instagram": {
+      "package": "com.instagram.android",
+      "version_name": "451.0.0.53.80",
+      "version_code": 385713116,
+      "min_sdk": 28,
+      "target_sdk": 36
+    },
+    "webview": {
+      "package": "com.google.android.webview",
+      "version_name": "155.0.8059.43"
+    }
+  },
+  "generated_signatures": {
+    "app_user_agent": "Instagram 451.0.0.53.80 Android (35/15; 440dpi; 1080x2400; Xiaomi; 23129RAA4G; sapphire; qcom; en_US; 385713116)",
+    "webview_user_agent": "Mozilla/5.0 (Linux; Android 15; 23129RAA4G Build/AQ3A.240829.003; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/155.0.8059.43 Mobile Safari/537.36 Instagram 451.0.0.53.80 Android (35/15; 440dpi; 1080x2400; Xiaomi; 23129RAA4G; sapphire; qcom; en_US; 385713116)"
+  }
+}

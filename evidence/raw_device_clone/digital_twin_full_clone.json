@@ -1,0 +1,68 @@
+{
+  "schema_version": "2.0.0",
+  "digital_twin_identity": "Xiaomi Redmi Note 13 4G (sapphire_global)",
+  "extracted_at": "2026-10-17T00:10:00+03:30",
+  "methodology": "Hardware REA via ADB MCP & Native Inspection",
+  "evidence": {
+    "device_evidence_id": "ev_bbcfd57ddd4b21adeede2c471e313128dd1149158a763ee6bfe635df443f9d88",
+    "display_evidence_id": "ev_7b84a72c1d752cd3461b40998ebc4320f0344e5dcd617944f6055b1d6dea2725",
+    "package_evidence_id": "ev_5f3aacd748e71a02882636a7585dd36607f861ed5a3c433df27f0fd1536039f0"
+  },
+  "device_hardware": {
+    "brand": "Redmi",
+    "manufacturer": "Xiaomi",
+    "model": "23129RAA4G",
+    "product": "sapphire_global",
+    "device_code": "sapphire",
+    "board": "bengal",
+    "hardware": "qcom",
+    "soc_model": "SM6225",
+    "chipset": "qcom",
+    "gpu_vendor": "Qualcomm",
+    "gpu_renderer": "Adreno (TM) 610",
+    "opengles_version": "OpenGL ES 3.2 V@0615.91",
+    "cpu_abilist": ["arm64-v8a", "armeabi-v7a", "armeabi"],
+    "android_id": "556f8db9eada6d9c"
+  },
+  "os_build": {
+    "release": "15",
+    "sdk_int": 35,
+    "build_id": "AQ3A.240829.003",
+    "security_patch": "2026-08-01",
+    "fingerprint": "Redmi/sapphire_global/sapphire:15/AQ3A.240829.003/OS2.0.213.0.VNGMIXM:user/release-keys",
+    "timezone": "Asia/Tehran",
+    "locale": "en-US"
+  },
+  "display_metrics": {
+    "width": 1080,
+    "height": 2400,
+    "density_dpi": 440,
+    "scale_density": 2.75
+  },
+  "app_ecosystem": {
+    "instagram": {
+      "package": "com.instagram.android",
+      "version_name": "451.0.0.53.80",
+      "version_code": 385713116,
+      "min_sdk": 28,
+      "target_sdk": 36,
+      "installer": "com.android.vending",
+      "first_install_time": "2026-09-27 05:09:33",
+      "last_update_time": "2026-10-13 17:33:29"
+    },
+    "webview": {
+      "package": "com.google.android.webview",
+      "version_name": "155.0.8059.43"
+    }
+  },
+  "network_and_vpn_status": {
+    "vpn_active": true,
+    "dns_servers_captured": true
+  },
+  "reconstructed_headers": {
+    "user_agent_app": "Instagram 451.0.0.53.80 Android (35/15; 440dpi; 1080x2400; Xiaomi; 23129RAA4G; sapphire; qcom; en_US; 385713116)",
+    "user_agent_webview": "Mozilla/5.0 (Linux; Android 15; 23129RAA4G Build/AQ3A.240829.003; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/155.0.8059.43 Mobile Safari/537.36 Instagram 451.0.0.53.80 Android (35/15; 440dpi; 1080x2400; Xiaomi; 23129RAA4G; sapphire; qcom; en_US; 385713116)",
+    "x_ig_app_id": "1217981644879628",
+    "x_ig_android_id": "556f8db9eada6d9c"
+  }
+}
