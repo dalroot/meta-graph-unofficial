@@ -1,6 +1,6 @@
 /**
  * Meta Graph API v21.0 TypeScript Definitions
- * Standard schemas conforming to official Meta Platform documentation.
+ * Standard schemas conforming to official Meta Platform documentation and TwinGraph architecture.
  */
 
 export interface GraphUser {
@@ -83,6 +83,7 @@ export interface PublishMediaParams {
   media_type?: 'IMAGE' | 'VIDEO' | 'REELS' | 'STORIES';
   thumb_offset?: number;
   audio_cluster_id?: string;
+  share_to_feed?: boolean;
 }
 
 export interface ClientOptions {
@@ -92,4 +93,109 @@ export interface ClientOptions {
   baseUrl?: string;
   sessionPath?: string;
   enableDigitalTwin?: boolean;
+  offlineMode?: boolean;
+}
+
+/**
+ * Direct Messaging & Conversation Types (Meta Graph API v21.0 & Mobile MSYS)
+ */
+export interface GraphDirectMessage {
+  id: string;
+  created_time?: string;
+  from?: {
+    id: string;
+    username?: string;
+    name?: string;
+  };
+  to?: {
+    data: Array<{ id: string; username?: string; name?: string }>;
+  };
+  message?: string;
+  item_type?: string;
+}
+
+export interface GraphConversation {
+  id: string;
+  updated_time?: string;
+  unread_count?: number;
+  message_count?: number;
+  participants?: {
+    data: Array<{ id: string; username?: string; name?: string }>;
+  };
+  messages?: {
+    data: GraphDirectMessage[];
+    paging?: GraphPaging;
+  };
+  snippet?: string;
+}
+
+export interface DirectSendMessageResponse {
+  recipient_id?: string;
+  message_id: string;
+  thread_id?: string;
+  status: string;
+  timestamp?: number;
+}
+
+/**
+ * Hardware Codec Acceleration Profiles (Physical Redmi Note 13 4G)
+ */
+export interface HardwareCodecProfile {
+  brand: string;
+  model: string;
+  soc_model: string;
+  chipset: string;
+  video_decoder: string;
+  video_encoder: string;
+  image_encoder: string;
+  audio_decoder: string;
+  audio_encoder: string;
+  supported_resolutions: string[];
+  color_format: string;
+  max_bitrate_kbps: number;
+}
+
+/**
+ * Pando / Relay GraphQL Query Definitions
+ */
+export interface PandoQueryDefinition {
+  queryName: string;
+  docId?: string;
+  queryHash?: string;
+  variables?: Record<string, any>;
+}
+
+export interface PandoQueryResult<T> {
+  data: T;
+  extensions?: Record<string, any>;
+  errors?: any[];
+}
+
+export interface SessionTokens {
+  ds_user_id: string;
+  sessionid: string;
+  csrftoken: string;
+  mid?: string;
+  ig_did?: string;
+  datr?: string;
+  rur?: string;
+}
+
+export interface DeviceFingerprint {
+  brand: string;
+  manufacturer: string;
+  model: string;
+  device_code: string;
+  board: string;
+  soc_model: string;
+  chipset: string;
+  android_id: string;
+  os_release: string;
+  os_sdk_int: number;
+  build_id: string;
+  resolution: string;
+  density_dpi: number;
+  user_agent: string;
+  app_version: string;
+  app_version_code: number;
 }
