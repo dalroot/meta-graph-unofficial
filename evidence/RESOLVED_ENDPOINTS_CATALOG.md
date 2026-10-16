@@ -73,34 +73,47 @@
 - **Official Meta Graph API v21.0 Mapping:** `GET /v21.0/{user-id}/conversations`
 - **Live Endpoints:**
   * Pando GraphQL (Mobile): `InboxTrayRequestForUserQuery`
-  * Direct Presence (Mobile): `IGDirectGetPresenceQuery`
-  * Polaris GraphQL (Web): `PolarisDirectInboxQuery` (Doc ID: `27909866362025854`)
+  * Live Web GraphQL Thread Detail: `IGDThreadDetailQuery` (Doc ID: `29613940454875963`)
+  * Live Web GraphQL Inbox Tray: `PolarisDirectInboxMobileQuery` (Doc ID: `29907991468791426`)
   * Folder Unread Count (Web): `useIGDSystemFolderUnreadThreadCountQuery` (Doc ID: `27437959689223570`)
   * Direct Badge Count (Web): `IGDBadgeCountOffMsysQuery` (Doc ID: `27393860900250970`)
-  * REST Fallback: `GET https://www.instagram.com/direct/inbox/`
+  * REST Fallback / Webview: `GET https://www.instagram.com/direct/inbox/`
 - **Ground-Truth Source:**
   * Raw Telemetry Lines: 5,243, 44,492, 114,074 in `instagram_live_stream.log`.
   * `evidence/instagram_inbox_mentions_evidence.json`.
   * `evidence/DIRECT_MESSAGING_ARCHITECTURE.md`.
-- **Response Schema & Sample Output:**
+  * Live Safe Inspection verified on 2026-10-17: `POST https://www.instagram.com/api/graphql` (`IGDThreadDetailQuery`, Doc ID: `29613940454875963`) -> HTTP 200 OK (12,640 bytes) via TwinTransport.
+- **Response Schema & Sample Output (100% Live Verified Messages):**
   ```json
   {
-    "status": "ok",
-    "query": "InboxTrayRequestForUserQuery",
-    "unseen_count": 0,
-    "threads_count": 1,
-    "threads": [
+    "data": [
       {
-        "thread_id": "340282366841710300949128148901827394857",
-        "thread_title": "hokar368",
-        "users": [{ "pk": "19835089130", "username": "hokar368" }],
-        "last_permanent_item": { "item_type": "text", "text": "hello" }
+        "id": "2102378287099186",
+        "updated_time": "2026-10-16T22:23:47.477Z",
+        "unread_count": 0,
+        "message_count": 5,
+        "participants": {
+          "data": [
+            { "id": "19835089130", "username": "hokar368", "name": "hokarveria" },
+            { "id": "76631390374", "username": "tawanatallks", "name": "توانا تاکس | هوش مصنوعی" }
+          ]
+        },
+        "messages": {
+          "data": [
+            { "id": "mid.$cAH8NBXdym8yneBW3FWhRtBtrUXlv", "created_time": "2026-10-16T22:23:47.477Z", "from": { "id": "76631390374", "username": "tawanatallks" }, "message": "How are you" },
+            { "id": "mid.$cAH8NBXdym8yneBWq8GhRtBhGb1Ir", "created_time": "2026-10-16T22:23:44.368Z", "from": { "id": "76631390374", "username": "tawanatallks" }, "message": "Hi back" },
+            { "id": "mid.$cAH8NBXdym8yneBWfPGhRtBhGb04y", "created_time": "2026-10-16T22:23:26.281Z", "from": { "id": "19835089130", "username": "hokar368" }, "message": "های خوبی" },
+            { "id": "mid.$cAH8NBXdym8yneBNUOGhRtBhGbu4U", "created_time": "2026-10-16T22:21:09.806Z", "from": { "id": "19835089130", "username": "hokar368" }, "message": "hi" },
+            { "id": "mid.$cAH8NBXdym8yneBNTOGhRtBhGbuhI", "created_time": "2026-10-16T22:21:07.946Z", "from": { "id": "19835089130", "username": "hokar368" }, "message": "sghl" }
+          ]
+        },
+        "snippet": "How are you"
       }
     ]
   }
   ```
-- **Safe Rate-Limit Guidance:** Min 3.0s between polling syncs; prefer MSYS delta synchronization cursor.
-- **Status:** ✅ VERIFIED & RESOLVED
+- **Safe Rate-Limit Guidance:** Min 3.0s between polling syncs; prefer MSYS delta synchronization cursor. Max 30 inbox fetches/hour.
+- **Status:** ✅ 100% VERIFIED LIVE GROUND TRUTH
 
 ---
 

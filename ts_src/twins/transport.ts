@@ -4,6 +4,7 @@
  */
 
 import * as https from 'node:https';
+import * as zlib from 'node:zlib';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 
 export interface TransportResponse {
@@ -48,11 +49,21 @@ export class TwinTransport {
           timeout: timeout
         },
         (res) => {
+          let stream: NodeJS.ReadableStream = res;
+          const encoding = res.headers['content-encoding'];
+          if (encoding === 'gzip') {
+            stream = res.pipe(zlib.createGunzip());
+          } else if (encoding === 'deflate') {
+            stream = res.pipe(zlib.createInflate());
+          } else if (encoding === 'br') {
+            stream = res.pipe(zlib.createBrotliDecompress());
+          }
+
           let data = '';
-          res.on('data', (chunk) => {
+          stream.on('data', (chunk) => {
             data += chunk.toString();
           });
-          res.on('end', () => {
+          stream.on('end', () => {
             const resHeaders: Record<string, string> = {};
             for (const [k, v] of Object.entries(res.headers)) {
               if (v) resHeaders[k] = Array.isArray(v) ? v.join(', ') : v;
