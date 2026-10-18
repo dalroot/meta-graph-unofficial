@@ -62,6 +62,66 @@
         "expiring_at": 1792001433,
         "status": "ok"
       }
+    },
+    {
+      "action": "feed_post_upload",
+      "timestamp": "2026-10-18T19:24:00Z",
+      "status": "success",
+      "upload_step": {
+        "endpoint": "https://www.instagram.com/rupload_igphoto/1792351451234",
+        "method": "POST",
+        "upload_id": "1792351451234",
+        "response_status": 200,
+        "attempts": 1,
+        "errors": 0
+      },
+      "configure_step": {
+        "endpoint": "https://www.instagram.com/api/v1/media/configure/",
+        "method": "POST",
+        "payload": {
+          "upload_id": "1792351451234",
+          "caption": "Persian promotional post with Vazirmatn-Bold styled image",
+          "source_type": "library",
+          "disable_comments": 0,
+          "like_and_view_counts_disabled": 0
+        },
+        "response_status": 200,
+        "media_id": "4010857192890410435_19835089130",
+        "shortcode": "DepbV3TDaXD",
+        "live_url": "https://www.instagram.com/p/DepbV3TDaXD/",
+        "status": "ok",
+        "attempts": 1,
+        "errors": 0
+      }
+    },
+    {
+      "action": "story_upload",
+      "timestamp": "2026-10-18T19:24:00Z",
+      "status": "success",
+      "upload_step": {
+        "endpoint": "https://www.instagram.com/rupload_igphoto/1792351437201",
+        "method": "POST",
+        "upload_id": "1792351437201",
+        "response_status": 200,
+        "attempts": 1,
+        "errors": 0
+      },
+      "configure_step": {
+        "endpoint": "https://www.instagram.com/api/v1/media/configure_to_story/",
+        "method": "POST",
+        "payload": {
+          "upload_id": "1792351437201",
+          "source_type": "library",
+          "configure_mode": "1"
+        },
+        "response_status": 200,
+        "media_id": "4010857071171723200_19835089130",
+        "story_code": "DepbUF8Dd_A",
+        "is_reel_media": true,
+        "status": "ok",
+        "attempts": 1,
+        "errors": 0
+      }
     }
   ]
 }

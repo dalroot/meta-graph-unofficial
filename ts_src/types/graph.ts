@@ -84,7 +84,88 @@ export interface PublishMediaParams {
   thumb_offset?: number;
   audio_cluster_id?: string;
   share_to_feed?: boolean;
+  // Extended fields for local buffer/payload or story overlays
+  image_buffer?: Buffer | Uint8Array;
+  video_buffer?: Buffer | Uint8Array;
+  user_tags?: Array<{ username: string; x: number; y: number }>;
+  location_id?: string;
 }
+
+export interface PublishFeedPostParams {
+  imageUrl?: string;
+  imageBuffer?: Buffer | Uint8Array;
+  caption?: string;
+  userTags?: Array<{ username: string; x: number; y: number }>;
+  locationId?: string;
+  disableComments?: boolean;
+  likeAndViewCountsDisabled?: boolean;
+}
+
+export interface StoryTextOverlayParam {
+  text: string;
+  font?: string;
+  fontSize?: number;
+  textColor?: string;
+  backgroundColor?: string;
+  alignment?: 'LEFT' | 'CENTER' | 'RIGHT';
+  x?: number; // 0.0 - 1.0
+  y?: number; // 0.0 - 1.0
+}
+
+export interface StoryStickerParam {
+  type: 'mention' | 'hashtag' | 'link' | 'poll' | 'question' | 'countdown';
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  data?: Record<string, any>;
+}
+
+export interface PublishStoryParams {
+  imageUrl?: string;
+  imageBuffer?: Buffer | Uint8Array;
+  videoUrl?: string;
+  videoBuffer?: Buffer | Uint8Array;
+  textOverlays?: StoryTextOverlayParam[];
+  stickers?: StoryStickerParam[];
+}
+
+export interface PublishReelParams {
+  videoUrl?: string;
+  videoBuffer?: Buffer | Uint8Array;
+  caption?: string;
+  coverImageUrl?: string;
+  coverImageBuffer?: Buffer | Uint8Array;
+  audioClusterId?: string;
+  shareToFeed?: boolean;
+  durationMs?: number;
+}
+
+export interface PublishNoteParams {
+  text: string;
+  audience?: 'followers_you_follow_back' | 'close_friends';
+}
+
+export interface GraphNote {
+  id: string;
+  text: string;
+  created_at: number;
+  expires_at: number;
+  user_id: string;
+  audience: string;
+  status: string;
+}
+
+export interface ParsedCaptionInfo {
+  text: string;
+  length: number;
+  isValid: boolean;
+  characterLimit: number;
+  hashtags: string[];
+  mentions: string[];
+  warnings: string[];
+}
+
 
 export interface ClientOptions {
   accessToken?: string;
@@ -94,6 +175,7 @@ export interface ClientOptions {
   sessionPath?: string;
   enableDigitalTwin?: boolean;
   offlineMode?: boolean;
+  mobileSession?: string | Record<string, any>;
 }
 
 /**
@@ -177,8 +259,13 @@ export interface SessionTokens {
   csrftoken: string;
   mid?: string;
   ig_did?: string;
+  device_id?: string;
+  phone_id?: string;
+  authorization?: string;
   datr?: string;
   rur?: string;
+  fb_dtsg?: string;
+  jazoest?: string;
 }
 
 export interface DeviceFingerprint {
@@ -199,3 +286,378 @@ export interface DeviceFingerprint {
   app_version: string;
   app_version_code: number;
 }
+
+/**
+ * Search & Discovery Types (Meta Graph API v21.0 & Mobile fbsearch)
+ */
+export interface GraphSearchUser {
+  id: string;
+  username: string;
+  name: string;
+  is_verified?: boolean;
+  is_private?: boolean;
+  profile_pic_url?: string;
+  has_anonymous_profile_picture?: boolean;
+  position?: number;
+}
+
+export interface GraphSearchHashtag {
+  id: string;
+  name: string;
+  media_count?: number;
+  search_result_subtitle?: string;
+  position?: number;
+}
+
+export interface GraphSearchResponse {
+  users: GraphSearchUser[];
+  hashtags: GraphSearchHashtag[];
+  rank_token?: string;
+  status: string;
+  total_items: number;
+  raw_items?: any[];
+}
+
+export interface SearchOptions {
+  context?: 'blended' | 'user' | 'hashtag' | 'place';
+  rankToken?: string;
+  count?: number;
+}
+
+/**
+ * Mobile Professional Dashboard Types (Meta Graph API v21.0 & Redmi Note 13 Telemetry)
+ */
+export type DashboardTimeframe = '7d' | '14d' | '30d' | '90d';
+
+export interface GraphMetricBreakdown {
+  home: number;
+  explore: number;
+  profile: number;
+  other: number;
+}
+
+export interface GraphAccountOverview {
+  timeframe: DashboardTimeframe;
+  timeframe_days: number;
+  accounts_reached: number;
+  accounts_reached_growth_pct: number;
+  reach_breakdown: {
+    followers: number;
+    non_followers: number;
+  };
+  accounts_engaged: number;
+  accounts_engaged_growth_pct: number;
+  total_followers: number;
+  net_follower_growth: number;
+  follower_growth_pct: number;
+  content_interactions: {
+    total: number;
+    growth_pct: number;
+    likes: number;
+    comments: number;
+    saves: number;
+    shares: number;
+    replies: number;
+  };
+  profile_activity: {
+    profile_visits: number;
+    growth_pct: number;
+    website_taps: number;
+    email_button_taps?: number;
+    call_button_taps?: number;
+  };
+  impressions: number;
+  impressions_breakdown?: GraphMetricBreakdown;
+  total_content_shared: {
+    posts: number;
+    reels: number;
+    stories: number;
+    total: number;
+  };
+}
+
+export interface GraphDemographicItem {
+  label: string;
+  value: number;
+  percentage: number;
+}
+
+export interface GraphAudienceInsights {
+  total_followers: number;
+  growth_summary: {
+    overall_growth_pct: number;
+    unfollows: number;
+    follows: number;
+  };
+  top_cities: GraphDemographicItem[];
+  top_countries: GraphDemographicItem[];
+  age_distribution: GraphDemographicItem[];
+  gender_distribution: {
+    male_pct: number;
+    female_pct: number;
+    custom_pct?: number;
+  };
+  gender_age_breakdown: Record<string, { male: number; female: number }>;
+  active_hours: Array<{ hour: number; active_count: number }>;
+  active_days: Array<{ day: string; active_count: number }>;
+}
+
+export interface TopMediaItem {
+  id: string;
+  media_type: 'REELS' | 'FEED' | 'STORY';
+  title?: string;
+  caption?: string;
+  thumbnail_url?: string;
+  permalink?: string;
+  timestamp: string;
+  reach: number;
+  plays?: number;
+  impressions: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  engagement_rate: number;
+}
+
+export interface GraphContentPerformance {
+  timeframe: DashboardTimeframe;
+  top_posts: TopMediaItem[];
+  top_reels: TopMediaItem[];
+  top_stories: TopMediaItem[];
+  content_count_by_type: {
+    posts: number;
+    reels: number;
+    stories: number;
+  };
+  average_engagement_per_post: number;
+  average_watch_time_seconds: number;
+}
+
+export interface ProfessionalToolsStatus {
+  creator_status: 'eligible' | 'active' | 'not_eligible';
+  account_category: string;
+  monetization_eligibility: {
+    is_eligible: boolean;
+    status: 'eligible' | 'not_eligible' | 'review_required';
+    branded_content: boolean;
+    creator_marketplace: boolean;
+    gifts_enabled: boolean;
+    subscriptions_eligible: boolean;
+  };
+  ad_tools: {
+    active_promotions: number;
+    ad_account_linked: boolean;
+    ad_account_id?: string;
+    total_ad_spend_usd?: number;
+  };
+  quick_replies: {
+    total_count: number;
+    faq_enabled: boolean;
+    frequently_asked_questions: Array<{ question: string; answer: string }>;
+  };
+}
+
+export interface ProfessionalDashboardData {
+  user_id: string;
+  username: string;
+  timeframe: DashboardTimeframe;
+  account_overview: GraphAccountOverview;
+  audience_insights: GraphAudienceInsights;
+  content_performance: GraphContentPerformance;
+  professional_tools: ProfessionalToolsStatus;
+  graph_api_equivalent: GraphInsightsResponse;
+}
+
+/**
+ * Granular & Advanced Insights Definitions (Mobile Telemetry & Meta Graph API v21.0)
+ */
+
+export type ExtendedAnalyticsTimeframe = '24h' | '7d' | '14d' | '30d' | '90d' | '6m' | '1y' | '2y';
+
+export interface StoryNavigationMetrics {
+  taps_forward: number;
+  taps_back: number;
+  exits: number;
+  next_story: number;
+  completion_rate_pct: number;
+}
+
+export interface StoryInteractions {
+  replies: number;
+  sticker_taps: number;
+  link_clicks: number;
+  shares: number;
+  likes: number;
+  total: number;
+}
+
+export interface StoryProfileActivity {
+  profile_visits: number;
+  follows_from_story: number;
+}
+
+export interface GraphStoryInsights {
+  id: string;
+  media_type: 'STORY';
+  title?: string;
+  caption?: string;
+  permalink?: string;
+  thumbnail_url?: string;
+  created_at: string;
+  expires_at: string;
+  is_active: boolean;
+  timeframe: ExtendedAnalyticsTimeframe;
+  reach: number;
+  impressions: number;
+  reach_breakdown: {
+    followers: number;
+    followers_pct: number;
+    non_followers: number;
+    non_followers_pct: number;
+  };
+  navigation: StoryNavigationMetrics;
+  interactions: StoryInteractions;
+  profile_activity: StoryProfileActivity;
+  engagement_rate: number;
+}
+
+export interface ReelPlaysBreakdown {
+  initial_plays: number;
+  replays: number;
+  total_plays: number;
+  replay_ratio_pct: number;
+}
+
+export interface ReelWatchTime {
+  total_watch_time_seconds: number;
+  average_watch_time_seconds: number;
+  video_duration_seconds: number;
+  completion_rate_pct: number;
+}
+
+export interface ReelRetentionPoint {
+  second: number;
+  retention_pct: number;
+  drop_off_pct: number;
+  active_viewers: number;
+}
+
+export interface GraphReelInsights {
+  id: string;
+  media_type: 'REEL';
+  title?: string;
+  caption?: string;
+  permalink?: string;
+  thumbnail_url?: string;
+  timestamp: string;
+  reach: number;
+  reach_breakdown: {
+    followers: number;
+    followers_pct: number;
+    non_followers: number;
+    non_followers_pct: number;
+  };
+  plays_breakdown: ReelPlaysBreakdown;
+  watch_time: ReelWatchTime;
+  retention_curve: ReelRetentionPoint[];
+  interactions: {
+    likes: number;
+    comments: number;
+    shares: number;
+    saves: number;
+    total: number;
+  };
+  profile_activity: {
+    profile_visits: number;
+    follows_from_reel: number;
+  };
+  engagement_rate: number;
+}
+
+export interface PostImpressionsBreakdown {
+  home: number;
+  explore: number;
+  profile: number;
+  hashtags: number;
+  other: number;
+  total: number;
+}
+
+export interface GraphPostInsights {
+  id: string;
+  media_type: 'POST';
+  title?: string;
+  caption?: string;
+  permalink?: string;
+  thumbnail_url?: string;
+  timestamp: string;
+  reach: number;
+  reach_breakdown: {
+    followers: number;
+    followers_pct: number;
+    non_followers: number;
+    non_followers_pct: number;
+  };
+  impressions: number;
+  impressions_breakdown: PostImpressionsBreakdown;
+  interactions: {
+    likes: number;
+    comments: number;
+    shares: number;
+    saves: number;
+    total: number;
+  };
+  profile_activity: {
+    profile_visits: number;
+    follows_from_post: number;
+    website_taps: number;
+  };
+  engagement_rate: number;
+}
+
+export type ContentFilterType = 'REEL' | 'POST' | 'STORY' | 'ALL';
+export type ContentSortMetric = 'reach' | 'plays' | 'impressions' | 'likes' | 'comments' | 'shares' | 'saves' | 'follows' | 'exits';
+
+export interface ContentFilterOptions {
+  type?: ContentFilterType;
+  sort_by?: ContentSortMetric;
+  order?: 'asc' | 'desc';
+  timeframe?: ExtendedAnalyticsTimeframe;
+  limit?: number;
+}
+
+export interface UnifiedContentItem {
+  id: string;
+  media_type: 'REEL' | 'POST' | 'STORY';
+  title?: string;
+  caption?: string;
+  timestamp: string;
+  reach: number;
+  plays?: number;
+  impressions: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  follows: number;
+  exits?: number;
+  engagement_rate: number;
+  permalink?: string;
+  details: GraphStoryInsights | GraphReelInsights | GraphPostInsights;
+}
+
+export interface FilteredContentResponse {
+  total_count: number;
+  applied_filters: ContentFilterOptions;
+  summary: {
+    total_reach: number;
+    total_impressions: number;
+    total_interactions: number;
+    avg_engagement_rate: number;
+  };
+  items: UnifiedContentItem[];
+}
+
+
+

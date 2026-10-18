@@ -4,6 +4,7 @@
  */
 
 import * as https from 'node:https';
+import * as http from 'node:http';
 import * as zlib from 'node:zlib';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 
@@ -14,28 +15,39 @@ export interface TransportResponse {
   data: string;
 }
 
+export interface TransportRequestOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  timeoutMs?: number;
+}
+
 export class TwinTransport {
   private agent?: https.Agent;
 
-  constructor() {
-    const proxyUrl = process.env.HTTPS_PROXY || process.env.ALL_PROXY || process.env.HTTP_PROXY;
-    if (proxyUrl) {
-      this.agent = new SocksProxyAgent(proxyUrl) as unknown as https.Agent;
+  constructor(options: { proxyUrl?: string; agent?: https.Agent } = {}) {
+    if (options.agent) {
+      this.agent = options.agent;
+    } else {
+      const proxyUrl = options.proxyUrl || process.env.HTTPS_PROXY || process.env.ALL_PROXY || process.env.HTTP_PROXY;
+      if (proxyUrl) {
+        this.agent = new SocksProxyAgent(proxyUrl) as unknown as https.Agent;
+      }
     }
   }
 
   public async request(
     urlStr: string,
-    options: {
-      method?: string;
-      headers?: Record<string, string>;
-      body?: string;
-      timeoutMs?: number;
-    } = {}
+    options: TransportRequestOptions = {}
   ): Promise<TransportResponse> {
     const url = new URL(urlStr);
     const method = (options.method || 'GET').toUpperCase();
-    const timeout = options.timeoutMs || 15000;
+    const timeout = options.timeoutMs || 25000;
+
+    const headers = { ...(options.headers || {}) };
+    if (options.body && !headers['Content-Length'] && !headers['content-length']) {
+      headers['Content-Length'] = Buffer.byteLength(options.body, 'utf-8').toString();
+    }
 
     return new Promise((resolve, reject) => {
       const req = https.request(
@@ -44,7 +56,7 @@ export class TwinTransport {
           port: url.port || 443,
           path: `${url.pathname}${url.search}`,
           method: method,
-          headers: options.headers || {},
+          headers: headers,
           agent: this.agent,
           timeout: timeout
         },
@@ -92,5 +104,26 @@ export class TwinTransport {
       }
       req.end();
     });
+  }
+
+  /**
+   * Convenience helper to perform a request and parse JSON response
+   */
+  public async requestJson<T = any>(
+    urlStr: string,
+    options: TransportRequestOptions = {}
+  ): Promise<{ status: number; data: T; headers: Record<string, string> }> {
+    const res = await this.request(urlStr, options);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(res.data);
+    } catch {
+      throw new Error(`Failed to parse JSON response from ${urlStr} (Status ${res.status}): ${res.data.slice(0, 300)}`);
+    }
+    return {
+      status: res.status,
+      data: parsed,
+      headers: res.headers
+    };
   }
 }

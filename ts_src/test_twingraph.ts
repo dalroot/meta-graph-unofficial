@@ -210,8 +210,60 @@ async function runTwinGraphVerification() {
   }
   console.log('    ✓ Test 11 Passed: 100% backward compatibility preserved for MetaGraphClient.\n');
 
+  // -------------------------------------------------------------
+  // Test 12: Sub-Twin: DiscoveryTwin (Search & User Discovery)
+  // -------------------------------------------------------------
+  console.log('[*] Test 12: Verifying Sub-Twin tg.discovery (DiscoveryTwin)...');
+  const searchResult = await tg.api<any>('/users/search', { q: 'tawana' });
+  console.log(`    Search items total: ${searchResult.total_items}, Users count: ${searchResult.users.length}`);
+  const topUser = searchResult.users[0];
+  console.log('    Top matched user:', { id: topUser.id, username: topUser.username, name: topUser.name });
+  if (topUser.username !== 'tawanatallks' || topUser.id !== '76631390374') {
+    throw new Error(`Test 12 Failed: Expected @tawanatallks, got @${topUser.username}`);
+  }
+  if (!searchResult.rank_token || searchResult.total_items !== 55) {
+    throw new Error(`Test 12 Failed: Expected 55 items and rank_token, got ${searchResult.total_items}`);
+  }
+
+  // Direct twin shortcut test
+  const hashtagResults = await tg.discovery.searchHashtags('ai');
+  console.log(`    Hashtags found for 'ai': ${hashtagResults.length}`);
+  if (hashtagResults.length === 0 || hashtagResults[0].name !== 'ai') {
+    throw new Error('Test 12 Failed: Hashtag search did not find #ai');
+  }
+  console.log('    ✓ Test 12 Passed: DiscoveryTwin accurately executes Search & Discovery with 55 live items.\n');
+
+  // -------------------------------------------------------------
+  // Test 13: Sub-Twin: DashboardTwin (Mobile Professional Dashboard)
+  // -------------------------------------------------------------
+  console.log('[*] Test 13: Verifying Sub-Twin tg.dashboard (DashboardTwin)...');
+  const dashboardData = await tg.dashboard.getFullDashboard('30d');
+  console.log(`    Dashboard loaded for user: @${dashboardData.username} (${dashboardData.user_id})`);
+  console.log(`    30d Reach: ${dashboardData.account_overview.accounts_reached}, Engaged: ${dashboardData.account_overview.accounts_engaged}`);
+  console.log(`    Audience top city: ${dashboardData.audience_insights.top_cities[0]?.label}`);
+  console.log(`    Top reel: "${dashboardData.content_performance.top_reels[0]?.title}" (Plays: ${dashboardData.content_performance.top_reels[0]?.plays})`);
+  console.log(`    Creator status: ${dashboardData.professional_tools.creator_status}`);
+
+  if (dashboardData.account_overview.accounts_reached !== 42890 || dashboardData.audience_insights.top_cities.length === 0) {
+    throw new Error('Test 13 Failed: Unexpected dashboard overview metrics');
+  }
+
+  // Official Graph API route check: tg.api('/me/insights')
+  const apiInsights = await tg.api<any>('/me/insights', { metric: 'reach,impressions,follower_count' });
+  console.log(`    Graph API /me/insights metrics count: ${apiInsights.data.length}`);
+  if (apiInsights.data.length !== 3 || apiInsights.data[0].name !== 'reach') {
+    throw new Error('Test 13 Failed: Meta Graph API /me/insights did not return expected metrics');
+  }
+
+  // Multi-timeframe scaling test (7d)
+  const overview7d = await tg.dashboard.getOverview('7d');
+  if (overview7d.timeframe_days !== 7 || overview7d.accounts_reached >= dashboardData.account_overview.accounts_reached) {
+    throw new Error('Test 13 Failed: 7d overview did not scale properly');
+  }
+  console.log('    ✓ Test 13 Passed: DashboardTwin manages Mobile Professional Dashboard & Graph API v21.0 /me/insights.\n');
+
   console.log('================================================================');
-  console.log('  ALL 11 TWINGRAPH ARCHITECTURE TESTS COMPLETED SUCCESSFULLY!  ');
+  console.log('  ALL 13 TWINGRAPH ARCHITECTURE TESTS COMPLETED SUCCESSFULLY!  ');
   console.log('================================================================');
 }
 

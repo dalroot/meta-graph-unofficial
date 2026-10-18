@@ -41,7 +41,12 @@ graph TD
 3. **No Automated Retry Loops (Circuit Breaker):**
    - Execute exactly **1 attempt** per test.
    - If HTTP status != 200, immediately trip the circuit breaker (`circuit_breaker.json`), persist the log, and **STOP**. Never loop.
-4. **Mandatory Documentation Upon Success:**
+4. **Strict Stack Fidelity — TypeScript / TwinGraph SDK Only:**
+   - Under NO CIRCUMSTANCES should any agent or subagent write or run ad-hoc Python scripts (`curl_cffi`, `requests`, `urllib`, etc.) for Meta Graph API operations.
+   - All Graph API interactions, tests, and features MUST be executed directly through the official TypeScript SDK (`TwinGraph` / `ts_src/`) or verified Node.js transports (`TwinTransport`).
+5. **Zero Re-inventing / No Trial-and-Error Testing:**
+   - If an endpoint or feature is already tested and documented in `VERIFIED_CAPABILITIES_AND_ROADMAP.md` or `RESOLVED_ENDPOINTS_CATALOG.md`, DO NOT run exploratory trial-and-error tests or scratch scripts. Call the verified implementation directly.
+6. **Mandatory Documentation Upon Success:**
    - As soon as any endpoint or feature succeeds (HTTP 200), the agent MUST update `evidence/RESOLVED_ENDPOINTS_CATALOG.md` with:
      * Endpoint URI & Method
      * Query Parameters / Payload Schema
@@ -65,14 +70,18 @@ $$\text{Coverage Score} = \left( \frac{\text{Verified Endpoints Backed 1:1 by Me
 | **Direct Message Send** | `/{conversation-id}/messages` | `broadcast/text` + Pando | 🔄 In Progress |
 | **Reel / Media Fetch** | `/{media-id}` | Captured & Verified | ✅ 100% Ground Truth |
 | **Explore Feed** | N/A (Internal Navigation) | Captured & Verified | ✅ 100% Ground Truth |
+| **Search & Discovery (`topsearch_flat`)** | `GET /v21.0/ig_hashtag_search`<br>`GET /v21.0/users/search` | Captured & Verified (55 items, @tawanatallks) | ✅ 100% Ground Truth |
 
 ---
 
 ## 4. Subagent Protocol Checklist
 
-Before starting any task, a subagent must verify:
+Before starting any task, a subagent MUST verify:
+- [ ] Have I confirmed that I will ONLY use TypeScript / TwinGraph SDK and NEVER write ad-hoc Python scripts?
+- [ ] Have I checked `VERIFIED_CAPABILITIES_AND_ROADMAP.md` and `evidence/RESOLVED_ENDPOINTS_CATALOG.md` to avoid re-testing already verified features?
 - [ ] Have I searched `evidence/raw_telemetry/` for relevant queries and logs?
 - [ ] Have I verified the official Meta Graph API v21.0 equivalent in `docs/`?
 - [ ] Is my test payload using the active session tokens without inventing new fields?
 - [ ] Am I respecting the 1-attempt limit and ready to stop on any failure?
 - [ ] Am I ready to document successful results immediately into `RESOLVED_ENDPOINTS_CATALOG.md`?
+

@@ -12,13 +12,38 @@ import { DeviceTwin, DEFAULT_SESSION_PATH } from './twins/device_twin.js';
 import { GraphQLTwin } from './twins/graphql_twin.js';
 import { DirectTwin } from './twins/direct_twin.js';
 import { MediaTwin } from './twins/media_twin.js';
+import { DiscoveryTwin } from './twins/discovery_twin.js';
+import { DashboardTwin } from './twins/dashboard_twin.js';
 import {
   GraphUser,
   GraphMedia,
   GraphInsightsResponse,
   GraphConversation,
   PublishMediaParams,
-  ClientOptions
+  PublishFeedPostParams,
+  PublishStoryParams,
+  PublishReelParams,
+  PublishNoteParams,
+  GraphNote,
+  ParsedCaptionInfo,
+  ClientOptions,
+  GraphSearchResponse,
+  GraphSearchUser,
+  GraphSearchHashtag,
+  SearchOptions,
+  DashboardTimeframe,
+  GraphAccountOverview,
+  GraphAudienceInsights,
+  GraphContentPerformance,
+  ProfessionalToolsStatus,
+  ProfessionalDashboardData,
+  ExtendedAnalyticsTimeframe,
+  GraphStoryInsights,
+  GraphReelInsights,
+  GraphPostInsights,
+  ContentFilterOptions,
+  FilteredContentResponse,
+  UnifiedContentItem
 } from './types/graph.js';
 
 export class TwinGraph {
@@ -26,6 +51,8 @@ export class TwinGraph {
   private _graphql: GraphQLTwin;
   private _direct: DirectTwin;
   private _media: MediaTwin;
+  private _discovery: DiscoveryTwin;
+  private _dashboard: DashboardTwin;
 
   private accessToken: string;
   private apiVersion: string;
@@ -38,11 +65,14 @@ export class TwinGraph {
     this.baseUrl = options.baseUrl || 'http://localhost:8080';
     this.offlineMode = options.offlineMode ?? true;
 
-    // Initialize the 4 harmonious sub-twins
-    this._device = new DeviceTwin(options.sessionPath || DEFAULT_SESSION_PATH);
+    // Initialize the 6 harmonious sub-twins
+    const sessionInput = options.mobileSession || options.sessionPath || DEFAULT_SESSION_PATH;
+    this._device = new DeviceTwin(sessionInput);
     this._graphql = new GraphQLTwin(this._device);
-    this._direct = new DirectTwin(this._device, this._graphql);
+    this._direct = new DirectTwin(this._device, { offlineMode: this.offlineMode });
     this._media = new MediaTwin(this._device, this._graphql);
+    this._discovery = new DiscoveryTwin(this._device, { offlineMode: this.offlineMode });
+    this._dashboard = new DashboardTwin(this._device, { offlineMode: this.offlineMode });
   }
 
   // --- Sub-Twin Getters ---
@@ -63,6 +93,14 @@ export class TwinGraph {
     return this._media;
   }
 
+  public get discovery(): DiscoveryTwin {
+    return this._discovery;
+  }
+
+  public get dashboard(): DashboardTwin {
+    return this._dashboard;
+  }
+
   /**
    * Official Standard Meta Graph API Method
    * Matches official Meta JavaScript SDK FB.api() 1:1
@@ -70,6 +108,8 @@ export class TwinGraph {
    * Usage:
    *   tg.api('/me')
    *   tg.api('/me', { fields: 'id,name' })
+   *   tg.api('/me/insights', { metric: 'reach,impressions,follower_count' })
+   *   tg.api('/me/dashboard')
    *   tg.api('/DedDBnTCs-J/insights', 'GET')
    *   tg.api('/1234567/messages', 'POST', { message: 'Hello' })
    */
@@ -100,12 +140,67 @@ export class TwinGraph {
       return (await this.getMe(fields)) as unknown as T;
     }
 
-    // 2. Route: /{media_id}/insights
+    // 2. Route: Account Dashboard & Overview (/me/dashboard, /{user-id}/dashboard, /insights/account_overview)
+    const dashboardMatch = unversioned.match(/^\/(?:me\/dashboard|insights\/account_overview|([a-zA-Z0-9_-]+)\/dashboard)\/?$/);
+    if (dashboardMatch && method === 'GET') {
+      const timeframe = (params.timeframe || '30d') as DashboardTimeframe;
+      return (await this._dashboard.getFullDashboard(timeframe)) as unknown as T;
+    }
+
+    // 3. Route: Insights (Account Insights vs Media Insights)
+    // - Account Insights: /me/insights or /{user-id}/insights
+    // - Media Insights: /{media-id}/insights
     const insightsMatch = unversioned.match(/^\/([a-zA-Z0-9_-]+)\/insights\/?$/);
     if (insightsMatch) {
-      const mediaId = insightsMatch[1];
+      const targetId = insightsMatch[1];
       const metrics = params.metric ? String(params.metric).split(',') : undefined;
-      return (await this.getMediaInsights(mediaId, metrics)) as unknown as T;
+      const timeframe = (params.timeframe || (params.period === 'week' ? '7d' : params.period === 'days_28' ? '14d' : '30d')) as DashboardTimeframe;
+
+      // Distinguish account (/me, currentUserId, or metric specifies account metrics) vs media ID
+      if (targetId === 'me' || targetId === currentUserId) {
+        if (params.format === 'full' || params.format === 'dashboard') {
+          return (await this._dashboard.getFullDashboard(timeframe)) as unknown as T;
+        }
+        return (await this._dashboard.getGraphApiInsights(timeframe, metrics)) as unknown as T;
+      } else {
+        if (params.type === 'reel' || params.breakdown === 'retention') {
+          return (await this._dashboard.getReelInsights(targetId)) as unknown as T;
+        }
+        if (params.type === 'post' || params.breakdown === 'surface') {
+          return (await this._dashboard.getPostInsights(targetId)) as unknown as T;
+        }
+        if (params.type === 'story' || params.breakdown === 'navigation') {
+          const tf = (params.timeframe || '24h') as ExtendedAnalyticsTimeframe;
+          return (await this._dashboard.getStoryInsights(targetId, tf)) as unknown as T;
+        }
+        const isAccountMetrics = metrics && metrics.some(m => ['follower_count', 'profile_views', 'website_clicks', 'accounts_engaged'].includes(m.toLowerCase()));
+        if (isAccountMetrics) {
+          return (await this._dashboard.getGraphApiInsights(timeframe, metrics)) as unknown as T;
+        }
+        return (await this.getMediaInsights(targetId, metrics)) as unknown as T;
+      }
+    }
+
+    // Dedicated Granular Content Insights Routes
+    const reelInsightsMatch = unversioned.match(/^\/([a-zA-Z0-9_-]+)\/reel_insights\/?$/);
+    if (reelInsightsMatch) {
+      return (await this._dashboard.getReelInsights(reelInsightsMatch[1])) as unknown as T;
+    }
+
+    const postInsightsMatch = unversioned.match(/^\/([a-zA-Z0-9_-]+)\/post_insights\/?$/);
+    if (postInsightsMatch) {
+      return (await this._dashboard.getPostInsights(postInsightsMatch[1])) as unknown as T;
+    }
+
+    const storyInsightsMatch = unversioned.match(/^\/([a-zA-Z0-9_-]+)\/story_insights\/?$/);
+    if (storyInsightsMatch) {
+      const tf = (params.timeframe || '24h') as ExtendedAnalyticsTimeframe;
+      return (await this._dashboard.getStoryInsights(storyInsightsMatch[1], tf)) as unknown as T;
+    }
+
+    const contentFilterMatch = unversioned.match(/^\/(?:insights\/content|content_insights)\/?$/);
+    if (contentFilterMatch) {
+      return (await this._dashboard.filterContentInsights(params)) as unknown as T;
     }
 
     // 3. Route: /{user_id}/conversations or /conversations
@@ -144,6 +239,24 @@ export class TwinGraph {
     if (singleMediaMatch && method === 'GET') {
       const mediaId = singleMediaMatch[1];
       return (await this._media.getMedia(mediaId)) as unknown as T;
+    }
+
+    // 8. Route: Notes & Status (/notes, /{user_id}/notes)
+    const notesMatch = unversioned.match(/^\/(?:[a-zA-Z0-9_-]+\/)?notes\/?$/);
+    if (notesMatch && method === 'POST') {
+      const text = params.text || params.message || '';
+      return (await this._media.publishNote({ text, audience: params.audience })) as unknown as T;
+    }
+
+    // 9. Route: Search & Discovery (/ig_hashtag_search, /users/search, /search, /fbsearch/topsearch_flat)
+    const searchMatch = unversioned.match(/^\/(?:ig_hashtag_search|users\/search|search|fbsearch\/topsearch_flat)\/?$/);
+    if (searchMatch && method === 'GET') {
+      const q = params.q || params.query || '';
+      return (await this._discovery.search(q, {
+        context: params.context || 'blended',
+        rankToken: params.rank_token,
+        count: params.count ? Number(params.count) : undefined
+      })) as unknown as T;
     }
 
     // Fallback if proxy server is active and not offlineMode
@@ -212,10 +325,134 @@ export class TwinGraph {
   }
 
   /**
-   * Complete media publishing workflow
+   * Complete media publishing workflow (Container -> Publish)
    */
   public async publishMedia(params: PublishMediaParams): Promise<{ id: string }> {
     return this._media.publishMedia(params);
+  }
+
+  /**
+   * Convenience: Publish Feed Post (with caption validation, hashtags, mentions)
+   */
+  public async publishFeedPost(params: PublishFeedPostParams): Promise<{ id: string; media_id: string; fbid: string; status: string; caption_info: ParsedCaptionInfo }> {
+    return this._media.publishFeedPost(params);
+  }
+
+  /**
+   * Convenience: Publish Story (photo/video with stickers or overlays)
+   */
+  public async publishStory(params: PublishStoryParams): Promise<{ id: string; media_id: string; fbid: string; is_reel_media: boolean; expiring_at: number; status: string }> {
+    return this._media.publishStory(params);
+  }
+
+  /**
+   * Convenience: Publish Reel (video with caption and audio cluster)
+   */
+  public async publishReel(params: PublishReelParams): Promise<{ id: string; media_id: string; fbid: string; status: string; caption_info: ParsedCaptionInfo }> {
+    return this._media.publishReel(params);
+  }
+
+  /**
+   * Convenience: Publish Status Note (up to 60 characters)
+   */
+  public async publishNote(params: PublishNoteParams): Promise<GraphNote> {
+    return this._media.publishNote(params);
+  }
+
+  /**
+   * Caption parser & validator helper
+   */
+  public validateCaption(caption: string): ParsedCaptionInfo {
+    return this._media.parseAndValidateCaption(caption);
+  }
+
+  /**
+   * Search & Discovery (`/fbsearch/topsearch_flat` / `/ig_hashtag_search` / `/users/search`)
+   */
+  public async search(query: string, options?: SearchOptions): Promise<GraphSearchResponse> {
+    return this._discovery.search(query, options);
+  }
+
+  /**
+   * Search users only
+   */
+  public async searchUsers(query: string, options?: SearchOptions): Promise<GraphSearchUser[]> {
+    return this._discovery.searchUsers(query, options);
+  }
+
+  /**
+   * Search hashtags only
+   */
+  public async searchHashtags(query: string, options?: SearchOptions): Promise<GraphSearchHashtag[]> {
+    return this._discovery.searchHashtags(query, options);
+  }
+
+  // --- Professional Dashboard Convenience Methods ---
+
+  /**
+   * Fetch full mobile Professional Dashboard data
+   */
+  public async getDashboard(timeframe: DashboardTimeframe = '30d'): Promise<ProfessionalDashboardData> {
+    return this._dashboard.getFullDashboard(timeframe);
+  }
+
+  /**
+   * Fetch account overview metrics (reach, engagement, follower growth)
+   */
+  public async getAccountOverview(timeframe: DashboardTimeframe = '30d'): Promise<GraphAccountOverview> {
+    return this._dashboard.getOverview(timeframe);
+  }
+
+  /**
+   * Fetch audience demographics (top cities, top countries, age/gender, active hours)
+   */
+  public async getAudienceInsights(): Promise<GraphAudienceInsights> {
+    return this._dashboard.getAudience();
+  }
+
+  /**
+   * Fetch content performance (top reels, top posts, top stories)
+   */
+  public async getContentPerformance(timeframe: DashboardTimeframe = '30d'): Promise<GraphContentPerformance> {
+    return this._dashboard.getContentPerformance(timeframe);
+  }
+
+  /**
+   * Fetch professional creator tools & monetization eligibility
+   */
+  public async getProfessionalTools(): Promise<ProfessionalToolsStatus> {
+    return this._dashboard.getProfessionalTools();
+  }
+
+  /**
+   * Fetch Granular Story Insights (navigation, replies, follower attribution, 24h to 2y archives)
+   */
+  public async getStoryInsights(
+    storyId: string,
+    timeframe: ExtendedAnalyticsTimeframe = '24h'
+  ): Promise<GraphStoryInsights> {
+    return this._dashboard.getStoryInsights(storyId, timeframe);
+  }
+
+  /**
+   * Fetch Granular Reel Insights (second-by-second retention curve, replays, watch time, follower attribution)
+   */
+  public async getReelInsights(reelId: string): Promise<GraphReelInsights> {
+    return this._dashboard.getReelInsights(reelId);
+  }
+
+  /**
+   * Fetch Granular Feed Post Insights (impressions by surface, follows from post, interaction distribution)
+   */
+  public async getPostInsights(postId: string): Promise<GraphPostInsights> {
+    return this._dashboard.getPostInsights(postId);
+  }
+
+  /**
+   * Filter and sort content across reels, posts, and stories with granular analytics
+   */
+  public async filterContentInsights(options?: ContentFilterOptions): Promise<FilteredContentResponse> {
+    return this._dashboard.filterContentInsights(options);
   }
 
   // --- Backward Compatibility Convenience Methods ---

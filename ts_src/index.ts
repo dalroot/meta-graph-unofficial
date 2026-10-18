@@ -1,6 +1,6 @@
 /**
  * Official Meta Graph API v21.0 TypeScript Library Entry Point
- * Harmonious TwinGraph Architecture
+ * Pure Mobile Twin Architecture (Xiaomi Redmi Note 13 4G)
  */
 
 export * from './types/graph.js';
@@ -15,9 +15,24 @@ export {
   GraphQLTwin,
   DirectTwin,
   MediaTwin,
+  DiscoveryTwin,
+  DiscoveryTwinOptions,
+  DashboardTwin,
+  DashboardTwinOptions,
+  TwinTransport,
+  MobileSession,
+  parseMobileSession,
+  loadMobileSession,
+  saveMobileSession,
+  formatMobileCookie,
+  parseCookieString,
   IG_SIGNING_KEY,
   IG_APP_ID_MOBILE,
-  IG_APP_ID_WEB
+  IG_APP_ID_WEB,
+  DeviceTwinSession,
+  DirectTwinOptions,
+  TransportResponse,
+  TransportRequestOptions
 } from './twins/index.js';
 
 export { DigitalTwinBridge } from './digital_twin_bridge.js';
