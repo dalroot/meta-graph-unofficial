@@ -1,6 +1,9 @@
 # Meta Graph Unofficial — Agent Operating Guidelines & Rules (AGENTS.md)
 
-> **PRIMARY DIRECTIVE:** All AI agents, subagents, and automated workers operating in this repository MUST strictly adhere to the **Meta Source Fidelity Standard**. Guesswork, ad-hoc web-scraping patterns, and deprecated unofficial hacks are strictly prohibited.
+> **PRIMARY DIRECTIVE & INVIOLABLE LAW (RULE ZERO):**
+> 1. **ZERO GUESSWORK & ZERO DEPRECATED ENDPOINTS:** Under no circumstances shall any agent, subagent, or process call an unverified, deprecated, or hypothetical endpoint (e.g. legacy `/api/v1/web/comments/`, `/web/search/`, or ad-hoc web routes).
+> 2. **MANDATORY RAW-TELEMETRY CITATION BEFORE EXECUTION:** Every single network request, API path, mutation, and query MUST be explicitly extracted from and cited with an exact line number / query name from the authentic REA Raw Telemetry (`evidence/raw_telemetry/` from the physical Redmi Note 13 4G) or the Official Meta Graph API v21.0 specification.
+> 3. **IF IT IS NOT IN THE RAW LOGS, DO NOT CALL IT:** If an action or mutation cannot be located in `evidence/raw_telemetry/`, the agent is STRICTLY FORBIDDEN from guessing or testing speculative routes. The agent MUST stop, state that it is absent from the raw logs, and require explicit user instructions.
 
 ---
 
@@ -77,9 +80,10 @@ $$\text{Coverage Score} = \left( \frac{\text{Verified Endpoints Backed 1:1 by Me
 ## 4. Subagent Protocol Checklist
 
 Before starting any task, a subagent MUST verify:
+- [ ] **RULE ZERO:** Have I located the exact query name or endpoint in `evidence/raw_telemetry/` with file and line citation?
+- [ ] If NOT in raw telemetry, have I halted instead of guessing web/deprecated routes?
 - [ ] Have I confirmed that I will ONLY use TypeScript / TwinGraph SDK and NEVER write ad-hoc Python scripts?
 - [ ] Have I checked `VERIFIED_CAPABILITIES_AND_ROADMAP.md` and `evidence/RESOLVED_ENDPOINTS_CATALOG.md` to avoid re-testing already verified features?
-- [ ] Have I searched `evidence/raw_telemetry/` for relevant queries and logs?
 - [ ] Have I verified the official Meta Graph API v21.0 equivalent in `docs/`?
 - [ ] Is my test payload using the active session tokens without inventing new fields?
 - [ ] Am I respecting the 1-attempt limit and ready to stop on any failure?
