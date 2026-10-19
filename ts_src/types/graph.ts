@@ -830,5 +830,19 @@ export interface FilteredContentResponse {
   items: UnifiedContentItem[];
 }
 
-
-
+/**
+ * Meta Graph API v21.0 Comment Representation
+ * Equivalent to Node: /{comment-id} or Edge: POST /{media-id}/comments
+ */
+export interface GraphComment {
+  id: string;
+  text: string;
+  timestamp?: string;
+  like_count?: number;
+  from?: {
+    id: string;
+    username: string;
+    name?: string;
+  };
+  status?: string;
+}

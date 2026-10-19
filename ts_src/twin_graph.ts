@@ -52,7 +52,8 @@ import {
   CreatorDestinationInfo,
   SubscriptionBenefitEligibility,
   FollowingListOptions,
-  FollowingListResponse
+  FollowingListResponse,
+  GraphComment
 } from './types/graph.js';
 
 export class TwinGraph {
@@ -227,6 +228,18 @@ export class TwinGraph {
         return (await this._direct.sendMessage(conversationId, text, params)) as unknown as T;
       } else {
         return (await this._direct.getMessages(conversationId, params.limit)) as unknown as T;
+      }
+    }
+
+    // 4b. Route: /{media_id}/comments (Official Meta Graph API v21.0 POST/GET /{media-id}/comments)
+    const commentsMatch = unversioned.match(/^\/([a-zA-Z0-9_-]+)\/comments?\/?$/);
+    if (commentsMatch) {
+      const mediaId = commentsMatch[1];
+      if (method === 'POST') {
+        const message = params.message || params.comment_text || params.text || '';
+        return (await this._media.postComment(mediaId, message)) as unknown as T;
+      } else {
+        return (await this._media.getComments(mediaId, params)) as unknown as T;
       }
     }
 
@@ -552,6 +565,28 @@ export class TwinGraph {
     options?: FollowingListOptions
   ): Promise<FollowingListResponse> {
     return this._discovery.getFollowing(userId, options);
+  }
+
+  /**
+   * Posts a comment on a media object
+   * Official Meta Graph API v21.0 Mapping: POST /{media-id}/comments
+   * Authentic Mobile Endpoint: POST https://i.instagram.com/api/v1/media/{cleanMediaId}/comment/
+   * Citations: Line 441786 (layout_comment_thread_post_button_icon, handler X.0GYp)
+   */
+  public async postComment(mediaId: string, message: string): Promise<GraphComment> {
+    return this._media.postComment(mediaId, message);
+  }
+
+  /**
+   * Retrieves comments on a media object
+   * Official Meta Graph API v21.0 Mapping: GET /{media-id}/comments
+   * Authentic Mobile Endpoint: GET https://i.instagram.com/api/v1/media/{cleanMediaId}/comments/
+   */
+  public async getComments(mediaId: string, options?: { limit?: number; min_id?: string }): Promise<{
+    data: GraphComment[];
+    paging?: any;
+  }> {
+    return this._media.getComments(mediaId, options);
   }
 
   // --- Backward Compatibility Convenience Methods ---

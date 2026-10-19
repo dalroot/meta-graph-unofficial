@@ -6,9 +6,11 @@
  * 2-step Meta Graph API v21.0 media publishing lifecycle (`/{user_id}/media` + `media_publish`).
  */
 
+import * as crypto from 'node:crypto';
 import { DeviceTwin } from './device_twin.js';
 import { GraphQLTwin } from './graphql_twin.js';
 import { DashboardTwin } from './dashboard_twin.js';
+import { TwinTransport } from './transport.js';
 import {
   GraphMedia,
   GraphInsightsResponse,
@@ -19,17 +21,20 @@ import {
   GraphPostInsights,
   ExtendedAnalyticsTimeframe,
   CustomDateRange,
-  FilteredContentResponse
+  FilteredContentResponse,
+  GraphComment
 } from '../types/graph.js';
 
 export class MediaTwin {
   private deviceTwin: DeviceTwin;
   private graphqlTwin: GraphQLTwin;
+  private transport: TwinTransport;
   private codecProfile: HardwareCodecProfile;
 
   constructor(deviceTwin?: DeviceTwin, graphqlTwin?: GraphQLTwin) {
     this.deviceTwin = deviceTwin || new DeviceTwin();
     this.graphqlTwin = graphqlTwin || new GraphQLTwin(this.deviceTwin);
+    this.transport = new TwinTransport();
 
     // Initialized from REA hardware extraction of physical Redmi Note 13 4G (SM6225)
     this.codecProfile = {
@@ -353,6 +358,160 @@ export class MediaTwin {
       custom_range: customRange,
       category
     });
+  }
+
+  /**
+   * Posts an authentic comment on a media object
+   * Official Meta Graph API v21.0 Mapping: POST /{media-id}/comments
+   * Authentic Mobile Endpoint: POST https://i.instagram.com/api/v1/media/{cleanMediaId}/comment/
+   * Telemetry Citation: Line 441786 (layout_comment_thread_post_button_icon, handler X.0GYp, module comments_v2_clips_viewer_serp_top_minor_unit)
+   */
+  public async postComment(mediaId: string, message: string): Promise<GraphComment> {
+    const text = message ? message.trim() : '';
+    if (!text) {
+      throw new Error('Comment message cannot be empty.');
+    }
+
+    // Clean numeric media ID if passed with user ID (e.g. 4010857192890410435_19835089130 -> 4010857192890410435)
+    const cleanMediaId = mediaId.includes('_') ? mediaId.split('_')[0] : mediaId;
+    const tokens = this.deviceTwin.getTokens();
+    const fp = this.deviceTwin.getFingerprint();
+    const idempotenceToken = crypto.randomUUID();
+    const commentCreationKey = crypto.randomUUID();
+
+    if (this.deviceTwin.hasActiveSession()) {
+      const rawPayload: Record<string, any> = {
+        _uid: this.deviceTwin.getUserId(),
+        _uuid: tokens.ig_did || tokens.device_id || fp.android_id,
+        _csrftoken: tokens.csrftoken || '',
+        comment_text: text,
+        container_module: 'comments_v2_clips_viewer_serp_top_minor_unit',
+        delivery_class: 'organic',
+        feed_position: '0',
+        tap_source: 'button',
+        is_2m_enabled: 'false',
+        is_carousel_bumped_post: 'false',
+        is_from_swipe: 'false',
+        floating_context_items: '[]',
+        media_pct_watched: '0',
+        idempotence_token: idempotenceToken,
+        comment_creation_key: commentCreationKey,
+        include_e2ee_mentioned_user_list: 'true',
+        include_media_code: 'true'
+      };
+
+      const bodyData = this.deviceTwin.getSignedBody(rawPayload);
+      const ligerHeaders = this.deviceTwin.getLigerHeaders('MediaComment');
+      const headers: Record<string, string> = {
+        ...ligerHeaders,
+        'Host': 'i.instagram.com',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'Content-Length': Buffer.byteLength(bodyData, 'utf-8').toString(),
+        'Accept': '*/*'
+      };
+
+      const url = `https://i.instagram.com/api/v1/media/${cleanMediaId}/comment/`;
+      const res = await this.transport.request(url, {
+        method: 'POST',
+        headers,
+        body: bodyData,
+        timeoutMs: 30000
+      });
+
+      if (res.status === 200) {
+        const parsed = JSON.parse(res.data);
+        if (parsed.status !== 'ok') {
+          throw new Error(`Mobile Media Comment on ${cleanMediaId} failed with status '${parsed.status}': ${JSON.stringify(parsed)}`);
+        }
+        const comment = parsed.comment || {};
+        return {
+          id: String(comment.pk || comment.id || idempotenceToken),
+          text: comment.text || text,
+          timestamp: comment.created_at ? new Date(comment.created_at * 1000).toISOString() : new Date().toISOString(),
+          like_count: comment.comment_like_count || 0,
+          from: {
+            id: String(comment.user_id || comment.user?.pk || this.deviceTwin.getUserId()),
+            username: comment.user?.username || this.deviceTwin.getUsername(),
+            name: comment.user?.full_name || this.deviceTwin.getFullName()
+          },
+          status: parsed.status || 'ok'
+        };
+      }
+
+      throw new Error(`Mobile Media Comment on ${cleanMediaId} returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
+    }
+
+    // Offline synthesized comment
+    return {
+      id: `comment_${Date.now()}_${idempotenceToken.slice(0, 8)}`,
+      text,
+      timestamp: new Date().toISOString(),
+      like_count: 0,
+      from: {
+        id: this.deviceTwin.getUserId(),
+        username: this.deviceTwin.getUsername(),
+        name: this.deviceTwin.getFullName()
+      },
+      status: 'ok'
+    };
+  }
+
+  /**
+   * Retrieves comments on a media object
+   * Official Meta Graph API v21.0 Mapping: GET /{media-id}/comments
+   * Authentic Mobile Endpoint: GET https://i.instagram.com/api/v1/media/{cleanMediaId}/comments/
+   * Telemetry Citations: evidence/comments_evidence.json, RESOLVED_ENDPOINTS_CATALOG.md line 256
+   */
+  public async getComments(mediaId: string, options: { limit?: number; min_id?: string } = {}): Promise<{
+    data: GraphComment[];
+    paging?: any;
+  }> {
+    const cleanMediaId = mediaId.includes('_') ? mediaId.split('_')[0] : mediaId;
+    if (this.deviceTwin.hasActiveSession()) {
+      const params = new URLSearchParams();
+      if (options.limit) params.set('limit', String(options.limit));
+      if (options.min_id) params.set('min_id', options.min_id);
+      const qs = params.toString();
+      const url = `https://i.instagram.com/api/v1/media/${cleanMediaId}/comments/${qs ? `?${qs}` : ''}`;
+      const headers = this.deviceTwin.getLigerHeaders('MediaComments');
+
+      const res = await this.transport.request(url, {
+        method: 'GET',
+        headers,
+        timeoutMs: 25000
+      });
+
+      if (res.status === 200) {
+        const parsed = JSON.parse(res.data);
+        const rawComments = parsed.comments || [];
+        const comments: GraphComment[] = rawComments.map((c: any) => ({
+          id: String(c.pk || c.id || ''),
+          text: c.text || '',
+          timestamp: c.created_at ? new Date(c.created_at * 1000).toISOString() : undefined,
+          like_count: c.comment_like_count || 0,
+          from: c.user ? {
+            id: String(c.user.pk || c.user_id || ''),
+            username: c.user.username || '',
+            name: c.user.full_name || ''
+          } : undefined,
+          status: 'ok'
+        }));
+        return {
+          data: comments,
+          paging: {
+            cursors: {
+              after: parsed.next_max_id || parsed.next_min_id
+            }
+          }
+        };
+      }
+      throw new Error(`Mobile Comments retrieval on ${cleanMediaId} returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
+    }
+
+    return {
+      data: [],
+      paging: {}
+    };
   }
 }
 
