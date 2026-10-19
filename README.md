@@ -28,20 +28,23 @@ Engineered with clean domain mixins, an optional Go transport engine, and strict
 
 ## Overview
 
-MetaGraph Unofficial is an enterprise-grade SDK designed to interface directly with Meta's internal web endpoints and private GraphQL services without requiring browser automation (Puppeteer/Selenium) or official Meta App Review.
+MetaGraph Unofficial is an enterprise-grade platform and **Drop-in REST API Gateway** (as well as a native TypeScript SDK) designed to interface directly with Meta's internal web endpoints and mobile Tigon/Liger services without requiring browser automation (Puppeteer/Selenium) or official Meta App Review.
 
-Most unofficial automation tools rely on reverse-engineered mobile endpoints that frequently trigger account challenges and action blocks. MetaGraph Unofficial mirrors genuine web browser sessions down to Client Hints, platform-specific TLS handshakes, and screen geometry.
+By evolving from a local SDK into a standalone **HTTP Wire-Compatible v21.0 Gateway**, any client (Python, PHP, Go, cURL, or serverless bots) can communicate with Instagram & Facebook as if they were talking directly to the official `graph.facebook.com` API, backed by authentic empirical telemetry and SHA-256 API key management.
 
 ---
 
 ## Key Features
 
+- **Standalone HTTP Wire Gateway:** Complete drop-in replacement for `graph.facebook.com/v21.0` accessible via standard HTTP REST requests from any language.
+- **SQLite API Key Vault:** High-speed SQLite-backed key manager with SHA-256 hashing, tiered quotas (`master`, `pro`, `free`), and rate limiting.
 - **Zero Meta App Review:** Eliminates the need for business entity verification, Facebook Partner requirements, and app approval workflows.
 - **Unified Meta Ecosystem:** A single interface covering both Instagram and Facebook.
 - **Zero Guesswork Architecture:** No method is admitted to the codebase without an empirical network trace recorded under the REA framework.
-- **Multi-OS Fingerprint Emulation:** Out-of-the-box support for Linux x86_64, Windows 11, and macOS Sonoma, with extensibility for custom profiles.
+- **Dual Digital Twins:** Hardware-level Xiaomi Redmi Note 13 4G Mobile Twin + Clean Chrome Web Twin.
+- **Multi-OS Fingerprint Emulation:** Out-of-the-box support for Linux x86_64, Windows 11, and Android HyperOS.
 - **Dual-Engine Architecture:** High-speed native Node.js interface paired with an optional Go core engine for high-throughput packet processing.
-- **Enterprise-Ready Modules:** Inbound comment streaming, automated Direct Message triggers, Feed/Story uploads, and Facebook GraphQL posting.
+- **Enterprise-Ready Modules:** Direct message sending, comment streaming, Feed/Story uploads, media insights, and dynamic `?fields=` projection.
 
 ---
 
