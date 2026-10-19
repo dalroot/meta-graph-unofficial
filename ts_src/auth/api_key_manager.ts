@@ -144,8 +144,7 @@ export class ApiKeyManager {
 
     // Role-based authorization & quota check
     if (record.role === 'master' || record.daily_limit === -1) {
-      // Master / Unlimited Key: record stats and allow unconditionally
-      this.db.prepare(`UPDATE api_keys SET usage_today = usage_today + 1, total_usage = total_usage + 1 WHERE key_id = ?`).run(record.key_id);
+      // Master / Unlimited Key: zero disk write overhead for blazing-fast execution
       return { valid: true, role: record.role, owner: record.owner_name, remainingToday: -1 };
     }
 
