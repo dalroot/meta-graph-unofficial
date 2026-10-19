@@ -66,6 +66,12 @@ meta-graph-unofficial/
 │   ├── utils/                         # Zero-Dependency Native Utilities
 │   │   ├── downloader.ts              # CDN media downloader, high-res poster & MP3 extractor
 │   │   └── index.ts
+│   ├── auth/                          # SQLite Persistent Security & API Key Vault
+│   │   ├── api_key_manager.ts         # Non-reversible SHA-256 key hashing & tiered quotas
+│   │   └── index.ts
+│   ├── gateway/                       # Drop-in Wire-Compatible HTTP Server
+│   │   ├── gateway_server.ts          # Native node:http v21.0 Gateway with Meta error shapes
+│   │   └── index.ts
 │   ├── profiles/                      # Hardware & Browser Digital Twin Profiles
 │   │   └── device_profiles.ts         # Redmi Note 13 4G + Clean Web Chrome
 │   ├── twins/                         # Empirical Engine Twins
@@ -79,6 +85,7 @@ meta-graph-unofficial/
 │   └── types/
 │       └── graph.ts                   # 1:1 Meta Graph API v21.0 Type Definitions
 ├── evidence/                          # Sanitized Empirical REA Evidence Ledger
+│   ├── SDK_BASELINE_BENCHMARK.md      # Official baseline performance metrics (19K - 31K ops/sec)
 │   ├── raw_telemetry/                 # 161,827+ lines of live Redmi Note 13 telemetry
 │   ├── RESOLVED_ENDPOINTS_CATALOG.md  # 57 verified endpoints with 100% REA backing
 │   └── web_comment_evidence.json      # Live web GraphQL comment traces
@@ -87,8 +94,12 @@ meta-graph-unofficial/
 │   ├── CONTRIBUTING.md                # Inviolable project rules & REA standards
 │   └── SESSION_EXTRACTION_GUIDE.md    # Session extraction instructions
 ├── scripts/
+│   ├── key_cli.ts                     # CLI for issuing, listing, and revoking API keys
+│   ├── start_gateway.ts               # Standalone runner for local v21.0 HTTP Gateway
+│   ├── test_gateway_live.ts           # 7 end-to-end integration tests for Gateway wire protocol
 │   ├── run_4_safe_tests.ts            # 4 safe read-only tests with v21.0 projection
 │   └── test_schema_engine.ts          # Unit tests for SQLite catalog & router
+├── data/                              # SQLite key vault storage (strictly gitignored)
 ├── instagram_session.json             # Validated session tokens
 ├── circuit_breaker.json               # Anti-ban safety circuit breaker
 └── package.json
@@ -220,6 +231,22 @@ await thread.sendMessage('Hello from TwinGraph v21.0!');
 // Query any verified node or edge directly using official v21.0 paths:
 const userProfile = await tg.get('/v21.0/me', { fields: 'id,username,followers_count,biography' });
 const mediaComments = await tg.get('/v21.0/Db-mzoXM6ik/comments', { fields: 'id,text,from' });
+```
+
+### 4. Standalone HTTP Wire Gateway & API Key Vault
+
+Run Meta Graph API v21.0 as a standalone local server accessible by **any programming language** (Python, PHP, Go, cURL):
+
+```bash
+# 1. Issue an API Key (Master for unlimited, or Free with quota)
+npx tsx scripts/key_cli.ts create --name "MyClient" --role master
+
+# 2. Start the local Wire Gateway Server (port 3000)
+npx tsx scripts/start_gateway.ts --port 3000
+
+# 3. Call with standard cURL, Python requests, or Postman:
+curl "http://localhost:3000/v21.0/me?access_token=YOUR_API_KEY"
+curl "http://localhost:3000/v21.0/me?fields=id,username" -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ---

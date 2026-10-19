@@ -42,3 +42,5 @@ export { GraphCatalog, FieldProjector } from './schema/index.js';
 export { GraphRouter } from './router/graph_router.js';
 export { GraphMediaProxy, GraphUserProxy, GraphConversationProxy } from './nodes/node_proxies.js';
 export { UniversalDownloader, MediaDownloadResult } from './utils/downloader.js';
+export { ApiKeyManager, KeyRole, ApiKeyRecord, KeyValidationResult } from './auth/index.js';
+export { TwinGatewayServer, GatewayServerOptions } from './gateway/index.js';

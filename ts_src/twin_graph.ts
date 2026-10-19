@@ -19,6 +19,8 @@ import { GraphRouter } from './router/graph_router.js';
 import { GraphMediaProxy, GraphUserProxy, GraphConversationProxy } from './nodes/node_proxies.js';
 import { GraphCatalog } from './schema/graph_catalog.js';
 import { UniversalDownloader, MediaDownloadResult } from './utils/downloader.js';
+import { ApiKeyManager } from './auth/api_key_manager.js';
+import { TwinGatewayServer } from './gateway/gateway_server.js';
 import {
   GraphUser,
   GraphMedia,
@@ -140,6 +142,10 @@ export class TwinGraph {
 
   public get catalog(): GraphCatalog {
     return GraphCatalog.getInstance();
+  }
+
+  public get keyManager(): ApiKeyManager {
+    return new ApiKeyManager();
   }
 
   /**
@@ -713,8 +719,18 @@ export class TwinGraph {
     return this.api<T>(endpoint, 'GET', params);
   }
 
-  public async post<T = any>(endpoint: string, body: Record<string, any> = {}): Promise<T> {
-    return this.api<T>(endpoint, 'POST', body);
+  /**
+   * Starts a local wire-compatible HTTP Gateway Server (Meta Graph API v21.0)
+   */
+  public async startGateway(port: number = 3000, host: string = '127.0.0.1'): Promise<TwinGatewayServer> {
+    const server = new TwinGatewayServer({
+      port,
+      host,
+      router: this._router,
+      keyManager: this.keyManager
+    });
+    await server.start();
+    return server;
   }
 }
 

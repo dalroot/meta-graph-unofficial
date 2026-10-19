@@ -1,0 +1,235 @@
+/**
+ * TwinGatewayServer - Zero-Dependency Native HTTP Drop-in Gateway
+ * 
+ * Exposes Meta Graph API v21.0 HTTP wire protocol on localhost.
+ * Accepts access_token query param and Authorization: Bearer <key>.
+ * 1:1 error shape and JSON payload match with official Meta Graph API.
+ */
+
+import * as http from 'node:http';
+import * as url from 'node:url';
+import * as crypto from 'node:crypto';
+import { GraphRouter } from '../router/graph_router.js';
+import { ApiKeyManager, KeyValidationResult } from '../auth/api_key_manager.js';
+
+export interface GatewayServerOptions {
+  port?: number;
+  host?: string;
+  router: GraphRouter;
+  keyManager?: ApiKeyManager;
+  allowGuestForPublicMedia?: boolean;
+}
+
+export class TwinGatewayServer {
+  private server: http.Server | null = null;
+  private port: number;
+  private host: string;
+  private router: GraphRouter;
+  private keyManager: ApiKeyManager;
+  private allowGuestForPublicMedia: boolean;
+
+  constructor(options: GatewayServerOptions) {
+    this.port = options.port || 3000;
+    this.host = options.host || '127.0.0.1';
+    this.router = options.router;
+    this.keyManager = options.keyManager || new ApiKeyManager();
+    this.allowGuestForPublicMedia = options.allowGuestForPublicMedia ?? false;
+  }
+
+  public getPort(): number {
+    return this.port;
+  }
+
+  public getHost(): string {
+    return this.host;
+  }
+
+  public getBaseUrl(): string {
+    return `http://${this.host}:${this.port}`;
+  }
+
+  public async start(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.server = http.createServer((req, res) => this.handleRequest(req, res));
+
+      this.server.on('error', (err) => {
+        reject(err);
+      });
+
+      this.server.listen(this.port, this.host, () => {
+        const addr = this.server?.address();
+        if (typeof addr === 'object' && addr?.port) {
+          this.port = addr.port;
+        }
+        resolve(this.getBaseUrl());
+      });
+    });
+  }
+
+  public async stop(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.server) return resolve();
+      this.server.close(() => {
+        this.server = null;
+        resolve();
+      });
+    });
+  }
+
+  private async handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    // Set standard CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Requested-With');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    const reqUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+    const pathname = reqUrl.pathname;
+
+    // 1. Health check & gateway status
+    if (pathname === '/' || pathname === '/health') {
+      res.writeHead(200);
+      res.end(JSON.stringify({
+        status: 'ok',
+        engine: 'Meta Graph Unofficial Drop-in Gateway',
+        api_version: 'v21.0',
+        active_port: this.port,
+        documentation: 'https://github.com/dalroot/meta-graph-unofficial'
+      }, null, 2));
+      return;
+    }
+
+    // 2. Extract Auth Token (Query Param `access_token` OR `Authorization: Bearer ...`)
+    const queryToken = reqUrl.searchParams.get('access_token');
+    const authHeader = req.headers['authorization'];
+    let bearerToken: string | null = null;
+    if (authHeader && typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')) {
+      bearerToken = authHeader.slice(7).trim();
+    }
+
+    const token = queryToken || bearerToken;
+
+    // 3. Validate Token
+    const authResult: KeyValidationResult = this.keyManager.validateKey(token);
+
+    if (!authResult.valid) {
+      const fbtraceId = `twin_${crypto.randomBytes(8).toString('hex')}`;
+
+      if (authResult.error === 'missing_key') {
+        res.writeHead(401);
+        res.end(JSON.stringify({
+          error: {
+            message: 'An active access token must be used to query information about the current user or resource.',
+            type: 'OAuthException',
+            code: 190,
+            fbtrace_id: fbtraceId
+          }
+        }, null, 2));
+        return;
+      }
+
+      if (authResult.error === 'daily_limit_exceeded') {
+        res.writeHead(429);
+        res.end(JSON.stringify({
+          error: {
+            message: '(#17) User request limit reached for this API Key.',
+            type: 'OAuthException',
+            code: 17,
+            error_subcode: 2446079,
+            fbtrace_id: fbtraceId
+          }
+        }, null, 2));
+        return;
+      }
+
+      // Invalid or revoked key
+      res.writeHead(401);
+      res.end(JSON.stringify({
+        error: {
+          message: 'Invalid OAuth access token - Cannot parse or verify access token signature.',
+          type: 'OAuthException',
+          code: 190,
+          error_subcode: 463,
+          fbtrace_id: fbtraceId
+        }
+      }, null, 2));
+      return;
+    }
+
+    // Set Gateway telemetry headers
+    if (authResult.role) {
+      res.setHeader('X-TwinGraph-Role', authResult.role);
+    }
+    if (authResult.remainingToday !== undefined) {
+      res.setHeader('X-TwinGraph-Remaining-Today', authResult.remainingToday.toString());
+    }
+
+    // 4. Collect Query Parameters & Body
+    const params: Record<string, any> = {};
+    reqUrl.searchParams.forEach((val, key) => {
+      if (key !== 'access_token') {
+        params[key] = val;
+      }
+    });
+
+    let bodyData = '';
+    if (req.method === 'POST') {
+      try {
+        bodyData = await this.readRequestBody(req);
+        if (bodyData.trim()) {
+          const parsedBody = JSON.parse(bodyData);
+          Object.assign(params, parsedBody);
+        }
+      } catch (err: any) {
+        res.writeHead(400);
+        res.end(JSON.stringify({
+          error: {
+            message: `Invalid JSON payload in request body: ${err.message}`,
+            type: 'OAuthException',
+            code: 100
+          }
+        }));
+        return;
+      }
+    }
+
+    // 5. Dispatch through GraphRouter
+    try {
+      const httpMethod = (req.method?.toUpperCase() || 'GET') as 'GET' | 'POST' | 'DELETE';
+      const result = await this.router.dispatch(pathname, httpMethod, params);
+      res.writeHead(200);
+      res.end(JSON.stringify(result, null, 2));
+    } catch (err: any) {
+      const statusCode = err.message?.includes('not found') ? 404 : 500;
+      res.writeHead(statusCode);
+      res.end(JSON.stringify({
+        error: {
+          message: err.message || 'Internal TwinGraph Gateway Error',
+          type: 'OAuthException',
+          code: statusCode === 404 ? 803 : 1
+        }
+      }, null, 2));
+    }
+  }
+
+  private readRequestBody(req: http.IncomingMessage): Promise<string> {
+    return new Promise((resolve, reject) => {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+        if (body.length > 5 * 1024 * 1024) { // 5MB guard
+          req.destroy();
+          reject(new Error('Request payload exceeds 5MB limit'));
+        }
+      });
+      req.on('end', () => resolve(body));
+      req.on('error', (err) => reject(err));
+    });
+  }
+}
