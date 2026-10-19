@@ -325,6 +325,48 @@ export interface SearchOptions {
 }
 
 /**
+ * Viral Engagement & Controversy Metrics
+ */
+export interface ViralEngagementMetrics {
+  comment_to_like_ratio: number;
+  comment_to_view_ratio: number;
+  like_to_view_ratio: number;
+  controversy_score: number;
+  is_hot_debate: boolean;
+}
+
+/**
+ * Explore Post with Viral & Controversy Metrics
+ */
+export interface ViralExplorePost {
+  id: string;
+  code: string;
+  permalink: string;
+  media_type: number;
+  media_type_name: string;
+  creator: {
+    id: string;
+    username: string;
+    name: string;
+    is_verified: boolean;
+    is_private: boolean;
+    profile_pic_url?: string;
+  };
+  caption: string;
+  like_count: number;
+  comment_count: number;
+  view_count: number;
+  play_count: number;
+  hashtags: string[];
+  metrics: ViralEngagementMetrics;
+}
+
+export interface ViralExploreOptions {
+  minCommentRatio?: number;
+  limit?: number;
+}
+
+/**
  * Mobile Professional Dashboard Types (Meta Graph API v21.0 & Redmi Note 13 Telemetry)
  */
 export type DashboardTimeframe = '7d' | '14d' | '30d' | '90d';
@@ -456,6 +498,8 @@ export interface ProfessionalToolsStatus {
     faq_enabled: boolean;
     frequently_asked_questions: Array<{ question: string; answer: string }>;
   };
+  creator_destination?: CreatorDestinationInfo;
+  subscription_benefits?: SubscriptionBenefitEligibility;
 }
 
 export interface ProfessionalDashboardData {
@@ -473,7 +517,99 @@ export interface ProfessionalDashboardData {
  * Granular & Advanced Insights Definitions (Mobile Telemetry & Meta Graph API v21.0)
  */
 
-export type ExtendedAnalyticsTimeframe = '24h' | '7d' | '14d' | '30d' | '90d' | '6m' | '1y' | '2y';
+export type ExtendedAnalyticsTimeframe = '24h' | '7d' | '14d' | '30d' | '90d' | '6m' | '1y' | '2y' | 'custom';
+
+export interface CustomDateRange {
+  startDate: string; // ISO string or YYYY-MM-DD
+  endDate: string;   // ISO string or YYYY-MM-DD
+}
+
+export interface ProfileTimelineOptions {
+  userId?: string;
+  count?: number;
+  cursor?: string;
+  feedType?: 'all' | 'posts' | 'reels' | 'tagged';
+}
+
+export interface ProfileTimelineResponse {
+  user: GraphUser;
+  items: GraphMedia[];
+  paging: GraphPaging;
+  pinned_post_ids?: string[];
+  total_media_count: number;
+  status: string;
+}
+
+export type CreatorDestinationType = 'CREATOR' | 'BUSINESS' | 'PERSONAL';
+
+export interface CreatorDestinationInfo {
+  user_id: string;
+  username: string;
+  account_type: CreatorDestinationType;
+  destination_type: 'FACEBOOK_PAGE' | 'NONE' | 'WHATSAPP_BUSINESS';
+  is_destination_switch_eligible: boolean;
+  linked_destination_id?: string;
+  linked_destination_name?: string;
+  allowed_transition_destinations: CreatorDestinationType[];
+  professional_conversion_status: 'ACTIVE_CREATOR' | 'ELIGIBLE_TO_SWITCH' | 'PENDING';
+}
+
+export type SubscriptionBenefitType =
+  | 'SUBSCRIBER_BADGES'
+  | 'EXCLUSIVE_REELS'
+  | 'SUBSCRIBER_BROADCAST_CHAT'
+  | 'SUBSCRIBER_STORIES'
+  | 'EXCLUSIVE_LIVES';
+
+export interface SubscriptionTier {
+  tier_id: string;
+  name: string;
+  price_cents: number;
+  currency: string;
+  formatted_price: string;
+  benefits: SubscriptionBenefitType[];
+}
+
+export interface SubscriptionBenefitEligibility {
+  user_id: string;
+  is_eligible: boolean;
+  status: 'ACTIVE' | 'INELIGIBLE' | 'PENDING' | 'REVOKED';
+  subscriber_count: number;
+  active_subscribers_mrr_cents: number;
+  enabled_benefits: SubscriptionBenefitType[];
+  available_tiers: SubscriptionTier[];
+  onboarding_flow_completed: boolean;
+}
+
+export interface FollowingUserItem {
+  id: string;
+  username: string;
+  full_name: string;
+  profile_pic_url: string;
+  is_verified: boolean;
+  is_private: boolean;
+  is_bestie: boolean;
+  is_restricted: boolean;
+  followed_by_viewer: boolean;
+  follows_viewer: boolean;
+  has_requested_viewer: boolean;
+  mutual_count: number;
+  following_since_timestamp?: number;
+}
+
+export interface FollowingListOptions {
+  limit?: number;
+  cursor?: string;
+  mutualsOnly?: boolean;
+  query?: string;
+}
+
+export interface FollowingListResponse {
+  status: string;
+  total_count: number;
+  users: FollowingUserItem[];
+  paging: GraphPaging;
+}
 
 export interface StoryNavigationMetrics {
   taps_forward: number;
@@ -543,11 +679,35 @@ export interface ReelRetentionPoint {
   active_viewers: number;
 }
 
+export interface ReelSurfaceBreakdown {
+  reels_tab: number;
+  home_feed: number;
+  explore: number;
+  profile_grid: number;
+  audio_page: number;
+  direct_shares: number;
+  total: number;
+}
+
+export interface AudienceRetentionRate {
+  rate_3s_pct: number;
+  rate_15s_pct: number;
+  rate_30s_pct: number;
+  completion_rate_pct: number;
+  average_watch_time_seconds: number;
+}
+
+export interface AudienceRetentionComparison {
+  followers: AudienceRetentionRate;
+  non_followers: AudienceRetentionRate;
+}
+
 export interface GraphReelInsights {
   id: string;
   media_type: 'REEL';
   title?: string;
   caption?: string;
+  category?: string;
   permalink?: string;
   thumbnail_url?: string;
   timestamp: string;
@@ -561,6 +721,10 @@ export interface GraphReelInsights {
   plays_breakdown: ReelPlaysBreakdown;
   watch_time: ReelWatchTime;
   retention_curve: ReelRetentionPoint[];
+  followers_retention_curve?: ReelRetentionPoint[];
+  non_followers_retention_curve?: ReelRetentionPoint[];
+  audience_retention_comparison?: AudienceRetentionComparison;
+  surface_breakdown?: ReelSurfaceBreakdown;
   interactions: {
     likes: number;
     comments: number;
@@ -589,6 +753,7 @@ export interface GraphPostInsights {
   media_type: 'POST';
   title?: string;
   caption?: string;
+  category?: string;
   permalink?: string;
   thumbnail_url?: string;
   timestamp: string;
@@ -621,9 +786,12 @@ export type ContentSortMetric = 'reach' | 'plays' | 'impressions' | 'likes' | 'c
 
 export interface ContentFilterOptions {
   type?: ContentFilterType;
+  category?: string;
   sort_by?: ContentSortMetric;
   order?: 'asc' | 'desc';
   timeframe?: ExtendedAnalyticsTimeframe;
+  custom_range?: CustomDateRange;
+  surface?: 'home' | 'explore' | 'reels_tab' | 'profile' | 'all';
   limit?: number;
 }
 
@@ -632,6 +800,7 @@ export interface UnifiedContentItem {
   media_type: 'REEL' | 'POST' | 'STORY';
   title?: string;
   caption?: string;
+  category?: string;
   timestamp: string;
   reach: number;
   plays?: number;
@@ -644,6 +813,8 @@ export interface UnifiedContentItem {
   exits?: number;
   engagement_rate: number;
   permalink?: string;
+  surface_breakdown?: ReelSurfaceBreakdown | PostImpressionsBreakdown;
+  audience_retention?: AudienceRetentionComparison;
   details: GraphStoryInsights | GraphReelInsights | GraphPostInsights;
 }
 

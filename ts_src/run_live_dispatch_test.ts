@@ -13,8 +13,8 @@ import * as zlib from 'node:zlib';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import { DeviceTwin } from './twins/device_twin.js';
 
-const CB_PATH = '/home/hokar/Documents/antigravity/silly-galileo/circuit_breaker.json';
-const SESSION_PATH = '/home/hokar/Documents/antigravity/silly-galileo/instagram_session.json';
+const CB_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/circuit_breaker.json';
+const SESSION_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/instagram_session.json';
 const PROXY_URL = process.env.HTTPS_PROXY || process.env.ALL_PROXY || 'socks5://127.0.0.1:10808';
 
 const TARGET_RECIPIENT = {
@@ -197,7 +197,7 @@ async function main() {
   console.log(JSON.stringify(result, null, 2));
 
   // Write dispatch record to disk
-  const outputPath = '/home/hokar/Documents/antigravity/silly-galileo/scratch/dm_sent_success.json';
+  const outputPath = '/home/hokar/Documents/antigravity/hopeful-bell/scratch/dm_sent_success.json';
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, JSON.stringify(result, null, 2), 'utf-8');
   console.log(`[+] Success record persisted to ${outputPath}`);

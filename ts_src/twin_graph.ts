@@ -43,7 +43,16 @@ import {
   GraphPostInsights,
   ContentFilterOptions,
   FilteredContentResponse,
-  UnifiedContentItem
+  UnifiedContentItem,
+  ViralEngagementMetrics,
+  ViralExplorePost,
+  ViralExploreOptions,
+  ProfileTimelineOptions,
+  ProfileTimelineResponse,
+  CreatorDestinationInfo,
+  SubscriptionBenefitEligibility,
+  FollowingListOptions,
+  FollowingListResponse
 } from './types/graph.js';
 
 export class TwinGraph {
@@ -234,6 +243,32 @@ export class TwinGraph {
       return (await this._media.publishMediaContainer(containerId)) as unknown as T;
     }
 
+    // 6b. Route: Profile & Timeline Hydration (IGProfileTimelineQuery)
+    const timelineMatch = unversioned.match(/^\/(?:me\/timeline|([a-zA-Z0-9_-]+)\/timeline|me\/feed|([a-zA-Z0-9_-]+)\/feed)\/?$/);
+    if (timelineMatch && method === 'GET') {
+      const targetUserId = timelineMatch[1] || timelineMatch[2];
+      return (await this.getProfileTimeline(targetUserId, params)) as unknown as T;
+    }
+
+    // 6c. Route: Creator Switching & Destination Metadata (IgCreatorDestinationTypeQuery)
+    const creatorDestMatch = unversioned.match(/^\/(?:me\/creator_destination|([a-zA-Z0-9_-]+)\/creator_destination|creator\/destination)\/?$/);
+    if (creatorDestMatch && method === 'GET') {
+      return (await this.getCreatorDestination()) as unknown as T;
+    }
+
+    // 6d. Route: Subscription Tier Benefits (SUBSBenefitEligibilityQuery)
+    const subBenefitsMatch = unversioned.match(/^\/(?:me\/subscription_benefits|([a-zA-Z0-9_-]+)\/subscription_benefits|subscriptions\/benefits|subscriptions\/eligibility)\/?$/);
+    if (subBenefitsMatch && method === 'GET') {
+      return (await this.getSubscriptionBenefits()) as unknown as T;
+    }
+
+    // 6e. Route: Following Graph Hydration (FollowingList)
+    const followingMatch = unversioned.match(/^\/(?:me\/following|([a-zA-Z0-9_-]+)\/following|following)\/?$/);
+    if (followingMatch && method === 'GET') {
+      const targetUserId = followingMatch[1];
+      return (await this.getFollowing(targetUserId, params)) as unknown as T;
+    }
+
     // 7. Route: Single Media Object /{media-id}
     const singleMediaMatch = unversioned.match(/^\/([a-zA-Z0-9_-]+)\/?$/);
     if (singleMediaMatch && method === 'GET') {
@@ -257,6 +292,20 @@ export class TwinGraph {
         rankToken: params.rank_token,
         count: params.count ? Number(params.count) : undefined
       })) as unknown as T;
+    }
+
+    // 9b. Route: Viral Explore & Controversy Engine (/explore/viral, /discover/viral_explore)
+    if (unversioned.match(/^\/(?:explore\/viral|discover\/viral_explore)\/?$/) && method === 'GET') {
+      return (await this._discovery.getViralExplore({
+        minCommentRatio: params.min_comment_ratio ? Number(params.min_comment_ratio) : undefined,
+        limit: params.limit ? Number(params.limit) : undefined
+      })) as unknown as T;
+    }
+
+    // 9c. Route: Trending Hashtags (/trending_hashtags, /hashtags/trending)
+    if (unversioned.match(/^\/(?:trending_hashtags|hashtags\/trending)\/?$/) && method === 'GET') {
+      const q = String(params.q || params.query || '');
+      return (await this._discovery.getTrendingHashtags(q)) as unknown as T;
     }
 
     // Fallback if proxy server is active and not offlineMode
@@ -387,6 +436,22 @@ export class TwinGraph {
     return this._discovery.searchHashtags(query, options);
   }
 
+  /**
+   * Viral Engagement & Controversy Engine (`/discover/topical_explore`)
+   * Ranks explore posts by true viral/controversial metrics (comment-to-view and comment-to-like engagement ratios).
+   */
+  public async getViralExplore(options?: ViralExploreOptions): Promise<ViralExplorePost[]> {
+    return this._discovery.getViralExplore(options);
+  }
+
+  /**
+   * Trending Hashtags Discovery
+   * Discovers and ranks trending hashtags for a given topic or keyword.
+   */
+  public async getTrendingHashtags(query: string): Promise<GraphSearchHashtag[]> {
+    return this._discovery.getTrendingHashtags(query);
+  }
+
   // --- Professional Dashboard Convenience Methods ---
 
   /**
@@ -453,6 +518,40 @@ export class TwinGraph {
    */
   public async filterContentInsights(options?: ContentFilterOptions): Promise<FilteredContentResponse> {
     return this._dashboard.filterContentInsights(options);
+  }
+
+  /**
+   * Hydrates Profile & Timeline Grid (IGProfileTimelineQuery)
+   */
+  public async getProfileTimeline(
+    userId?: string,
+    options?: ProfileTimelineOptions
+  ): Promise<ProfileTimelineResponse> {
+    return this._dashboard.getProfileTimeline(userId, options);
+  }
+
+  /**
+   * Retrieves Creator Switching & Destination Metadata (IgCreatorDestinationTypeQuery)
+   */
+  public async getCreatorDestination(): Promise<CreatorDestinationInfo> {
+    return this._dashboard.getCreatorDestination();
+  }
+
+  /**
+   * Retrieves Subscription Tier Benefits & Monetization Eligibility (SUBSBenefitEligibilityQuery)
+   */
+  public async getSubscriptionBenefits(): Promise<SubscriptionBenefitEligibility> {
+    return this._dashboard.getSubscriptionBenefitEligibility();
+  }
+
+  /**
+   * Hydrates User Following Graph (FollowingList)
+   */
+  public async getFollowing(
+    userId?: string,
+    options?: FollowingListOptions
+  ): Promise<FollowingListResponse> {
+    return this._discovery.getFollowing(userId, options);
   }
 
   // --- Backward Compatibility Convenience Methods ---

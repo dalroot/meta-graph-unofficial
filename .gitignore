@@ -15,3 +15,5 @@ evidence/raw_telemetry/
 *.tar.gz
 *.log
 dist/
+scratch/
+circuit_breaker.json

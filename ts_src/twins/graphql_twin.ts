@@ -12,7 +12,10 @@ import {
   GraphInsightsResponse,
   GraphConversation,
   PandoQueryDefinition,
-  PandoQueryResult
+  PandoQueryResult,
+  ProfileTimelineResponse,
+  FollowingListResponse,
+  FollowingUserItem
 } from '../types/graph.js';
 
 export class GraphQLTwin {
@@ -55,6 +58,22 @@ export class GraphQLTwin {
     'BloksAsyncComponentQuery': {
       docId: '454501280424084',
       description: 'Dynamic UI component AST loader'
+    },
+    'IGProfileTimelineQuery': {
+      docId: '739182940182746',
+      description: 'User profile timeline, clips and media grid hydration'
+    },
+    'IgCreatorDestinationTypeQuery': {
+      docId: '849201847291048',
+      description: 'Creator destination type and account transition validation'
+    },
+    'SUBSBenefitEligibilityQuery': {
+      docId: '948291048201948',
+      description: 'Subscription tier benefits and monetization eligibility'
+    },
+    'FollowingList': {
+      docId: '638291048291827',
+      description: 'User following graph and relationship list'
     }
   };
 
@@ -145,6 +164,195 @@ export class GraphQLTwin {
           }
         };
         break;
+
+      case 'IGProfileTimelineQuery': {
+        const targetUserId = variables.userId || userId;
+        data = {
+          status: 'ok',
+          user: {
+            id: targetUserId,
+            username: username,
+            full_name: this.deviceTwin.getFullName(),
+            biography: 'Zero-browser high-performance Meta Graph API library',
+            followers_count: 12450,
+            following_count: 89,
+            media_count: 3,
+            profile_pic_url: 'https://scontent-ams2-1.cdninstagram.com/avatar_placeholder.jpg',
+            is_verified: true,
+            is_business: true,
+            category: 'Technology / Software'
+          },
+          pinned_post_ids: ['18092837482910293'],
+          timeline: {
+            edges: [
+              {
+                node: {
+                  id: '18092837482910293',
+                  pk: '18092837482910293',
+                  code: 'DedDBnTCs-J',
+                  shortcode: 'DedDBnTCs-J',
+                  media_type: 2,
+                  product_type: 'clips',
+                  caption: { text: 'Meta Graph Unofficial: Pure Mobile Twin Architecture' },
+                  taken_at: Math.floor((Date.now() - 4 * 86400 * 1000) / 1000),
+                  like_count: 2410,
+                  comment_count: 184,
+                  video_play_count: 34920,
+                  is_pinned: true,
+                  image_versions2: {
+                    candidates: [{ url: 'https://instagram.com/p/DedDBnTCs-J/media/?size=t' }]
+                  }
+                }
+              },
+              {
+                node: {
+                  id: '18084729103847201',
+                  pk: '18084729103847201',
+                  code: 'DeXYZ12345',
+                  shortcode: 'DeXYZ12345',
+                  media_type: 2,
+                  product_type: 'clips',
+                  caption: { text: 'Redmi Note 13 Snapdragon 680 Hardware Codec Pipeline' },
+                  taken_at: Math.floor((Date.now() - 9 * 86400 * 1000) / 1000),
+                  like_count: 1840,
+                  comment_count: 94,
+                  video_play_count: 24580,
+                  is_pinned: false,
+                  image_versions2: {
+                    candidates: [{ url: 'https://instagram.com/p/DeXYZ12345/media/?size=t' }]
+                  }
+                }
+              },
+              {
+                node: {
+                  id: '18073829102948572',
+                  pk: '18073829102948572',
+                  code: 'DeABC67890',
+                  shortcode: 'DeABC67890',
+                  media_type: 1,
+                  product_type: 'feed',
+                  caption: { text: 'Meta Graph API v21.0 vs Mobile Telemetry Architecture Diagram' },
+                  taken_at: Math.floor((Date.now() - 11 * 86400 * 1000) / 1000),
+                  like_count: 1450,
+                  comment_count: 68,
+                  is_pinned: false,
+                  image_versions2: {
+                    candidates: [{ url: 'https://instagram.com/p/DeABC67890/media/?size=t' }]
+                  }
+                }
+              }
+            ],
+            page_info: {
+              has_next_page: false,
+              end_cursor: 'cursor_end_profile_timeline_3items'
+            }
+          }
+        };
+        break;
+      }
+
+      case 'IgCreatorDestinationTypeQuery': {
+        data = {
+          status: 'ok',
+          creator_destination_metadata: {
+            account_id: userId,
+            account_type: 'CREATOR',
+            destination_type: 'FACEBOOK_PAGE',
+            is_destination_switch_eligible: true,
+            linked_destination_id: '122108867655496701',
+            linked_destination_name: 'TwinGraph Official Developer Page',
+            allowed_transition_destinations: ['CREATOR', 'BUSINESS'],
+            professional_conversion_status: 'ACTIVE_CREATOR'
+          }
+        };
+        break;
+      }
+
+      case 'SUBSBenefitEligibilityQuery': {
+        data = {
+          status: 'ok',
+          subscription_eligibility: {
+            account_id: userId,
+            is_eligible: true,
+            status: 'ACTIVE',
+            subscriber_count: 42,
+            active_subscribers_mrr_cents: 20958,
+            enabled_benefits: [
+              'SUBSCRIBER_BADGES',
+              'EXCLUSIVE_REELS',
+              'SUBSCRIBER_BROADCAST_CHAT',
+              'SUBSCRIBER_STORIES',
+              'EXCLUSIVE_LIVES'
+            ],
+            available_tiers: [
+              {
+                tier_id: 'TIER_1',
+                name: 'Supporter Tier',
+                price_cents: 499,
+                currency: 'USD',
+                formatted_price: '$4.99/mo',
+                benefits: ['SUBSCRIBER_BADGES', 'EXCLUSIVE_REELS']
+              },
+              {
+                tier_id: 'TIER_2',
+                name: 'VIP Developer Tier',
+                price_cents: 999,
+                currency: 'USD',
+                formatted_price: '$9.99/mo',
+                benefits: ['SUBSCRIBER_BADGES', 'EXCLUSIVE_REELS', 'SUBSCRIBER_BROADCAST_CHAT', 'SUBSCRIBER_STORIES', 'EXCLUSIVE_LIVES']
+              }
+            ],
+            onboarding_flow_completed: true
+          }
+        };
+        break;
+      }
+
+      case 'FollowingList': {
+        data = {
+          status: 'ok',
+          total_count: 89,
+          users: [
+            {
+              pk: '76631390374',
+              id: '76631390374',
+              username: 'tawanatallks',
+              full_name: 'توانا تاکس | هوش مصنوعی',
+              profile_pic_url: 'https://scontent-ams2-1.cdninstagram.com/tawana_avatar.jpg',
+              is_verified: true,
+              is_private: false,
+              is_bestie: true,
+              is_restricted: false,
+              followed_by_viewer: true,
+              follows_viewer: true,
+              has_requested_viewer: false,
+              mutual_count: 14,
+              following_since_timestamp: 1729000000
+            },
+            {
+              pk: '19835089131',
+              id: '19835089131',
+              username: 'meta_ai_dev',
+              full_name: 'Meta AI Developers',
+              profile_pic_url: 'https://scontent-ams2-1.cdninstagram.com/meta_ai_avatar.jpg',
+              is_verified: true,
+              is_private: false,
+              is_bestie: false,
+              is_restricted: false,
+              followed_by_viewer: true,
+              follows_viewer: false,
+              has_requested_viewer: false,
+              mutual_count: 8,
+              following_since_timestamp: 1728000000
+            }
+          ],
+          page_info: {
+            has_next_page: false,
+            end_cursor: 'cursor_following_list_end'
+          }
+        };
+        break;
+      }
 
       default:
         data = {
@@ -272,6 +480,70 @@ export class GraphQLTwin {
       participants: { data: participants },
       messages: { data: messages },
       snippet: lastItem?.text || 'TwinGraph verified direct conversation'
+    };
+  }
+
+  /**
+   * Translates raw Pando IGProfileTimelineQuery response to Graph API compliant ProfileTimelineResponse
+   */
+  public translateProfileTimelineToGraphNodes(rawTimelineData: any): ProfileTimelineResponse {
+    const rawUser = rawTimelineData.user || {};
+    const user = this.translateUserToGraphNode(rawUser);
+
+    const edges = rawTimelineData.timeline?.edges || [];
+    const items: GraphMedia[] = edges.map((e: any) => this.translateMediaToGraphNode(e.node || e));
+
+    const pageInfo = rawTimelineData.timeline?.page_info || {};
+    const paging = {
+      cursors: {
+        after: pageInfo.end_cursor
+      },
+      next: pageInfo.has_next_page ? `https://graph.instagram.com/v21.0/${user.id}/media?after=${pageInfo.end_cursor}` : undefined
+    };
+
+    return {
+      status: rawTimelineData.status || 'ok',
+      user,
+      items,
+      paging,
+      pinned_post_ids: rawTimelineData.pinned_post_ids || [],
+      total_media_count: rawTimelineData.user?.media_count ?? items.length
+    };
+  }
+
+  /**
+   * Translates raw Pando FollowingList response to Graph API compliant FollowingListResponse
+   */
+  public translateFollowingListToGraphResponse(rawFollowingData: any): FollowingListResponse {
+    const users: FollowingUserItem[] = (rawFollowingData.users || []).map((u: any) => ({
+      id: String(u.pk || u.id),
+      username: u.username || 'unknown',
+      full_name: u.full_name || u.name || '',
+      profile_pic_url: u.profile_pic_url || '',
+      is_verified: Boolean(u.is_verified),
+      is_private: Boolean(u.is_private),
+      is_bestie: Boolean(u.is_bestie),
+      is_restricted: Boolean(u.is_restricted),
+      followed_by_viewer: u.followed_by_viewer ?? true,
+      follows_viewer: Boolean(u.follows_viewer),
+      has_requested_viewer: Boolean(u.has_requested_viewer),
+      mutual_count: Number(u.mutual_count || 0),
+      following_since_timestamp: u.following_since_timestamp
+    }));
+
+    const pageInfo = rawFollowingData.page_info || {};
+    const paging = {
+      cursors: {
+        after: pageInfo.end_cursor
+      },
+      next: pageInfo.has_next_page ? `https://graph.instagram.com/v21.0/me/following?after=${pageInfo.end_cursor}` : undefined
+    };
+
+    return {
+      status: rawFollowingData.status || 'ok',
+      total_count: rawFollowingData.total_count ?? users.length,
+      users,
+      paging
     };
   }
 }

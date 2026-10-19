@@ -29,7 +29,8 @@ export class TwinTransport {
     if (options.agent) {
       this.agent = options.agent;
     } else {
-      const proxyUrl = options.proxyUrl || process.env.HTTPS_PROXY || process.env.ALL_PROXY || process.env.HTTP_PROXY;
+      const defaultProxy = process.env.NO_PROXY ? undefined : 'socks5://127.0.0.1:10808';
+      const proxyUrl = options.proxyUrl || process.env.HTTPS_PROXY || process.env.ALL_PROXY || process.env.HTTP_PROXY || defaultProxy;
       if (proxyUrl) {
         this.agent = new SocksProxyAgent(proxyUrl) as unknown as https.Agent;
       }
@@ -104,6 +105,220 @@ export class TwinTransport {
       }
       req.end();
     });
+  }
+
+  /**
+   * Performs an HTTP request and returns raw binary Buffer
+   */
+  public async requestBuffer(
+    urlStr: string,
+    options: TransportRequestOptions = {}
+  ): Promise<{ status: number; statusText: string; headers: Record<string, string>; data: Buffer }> {
+    const url = new URL(urlStr);
+    const isHttps = url.protocol === 'https:';
+    const client = isHttps ? https : http;
+    const method = (options.method || 'GET').toUpperCase();
+    const timeout = options.timeoutMs || 30000;
+
+    const headers = { ...(options.headers || {}) };
+    if (options.body && !headers['Content-Length'] && !headers['content-length']) {
+      headers['Content-Length'] = Buffer.byteLength(options.body, 'utf-8').toString();
+    }
+
+    return new Promise((resolve, reject) => {
+      const req = client.request(
+        {
+          hostname: url.hostname,
+          port: url.port || (isHttps ? 443 : 80),
+          path: `${url.pathname}${url.search}`,
+          method: method,
+          headers: headers,
+          agent: this.agent,
+          timeout: timeout
+        },
+        (res) => {
+          let stream: NodeJS.ReadableStream = res;
+          const encoding = res.headers['content-encoding'];
+          if (encoding === 'gzip') {
+            stream = res.pipe(zlib.createGunzip());
+          } else if (encoding === 'deflate') {
+            stream = res.pipe(zlib.createInflate());
+          } else if (encoding === 'br') {
+            stream = res.pipe(zlib.createBrotliDecompress());
+          }
+
+          const chunks: Buffer[] = [];
+          stream.on('data', (chunk) => {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          });
+          stream.on('end', () => {
+            const resHeaders: Record<string, string> = {};
+            for (const [k, v] of Object.entries(res.headers)) {
+              if (v) resHeaders[k] = Array.isArray(v) ? v.join(', ') : v;
+            }
+            resolve({
+              status: res.statusCode || 0,
+              statusText: res.statusMessage || '',
+              headers: resHeaders,
+              data: Buffer.concat(chunks)
+            });
+          });
+        }
+      );
+
+      req.on('error', (err) => {
+        reject(err);
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error(`Network timeout after ${timeout}ms connecting to ${urlStr}`));
+      });
+
+      if (options.body) {
+        req.write(options.body);
+      }
+      req.end();
+    });
+  }
+
+  /**
+   * Streams a binary file directly to disk over SOCKS5 proxy
+   */
+  public async downloadToFile(
+    urlStr: string,
+    destinationFilePath: string,
+    options: TransportRequestOptions = {},
+    maxRedirects: number = 5
+  ): Promise<{ status: number; headers: Record<string, string>; bytes: number; filePath: string; contentType?: string }> {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+
+    let currentUrl = urlStr;
+    let redirectsCount = 0;
+
+    while (redirectsCount <= maxRedirects) {
+      const url = new URL(currentUrl);
+      const isHttps = url.protocol === 'https:';
+      const client = isHttps ? https : http;
+      const method = (options.method || 'GET').toUpperCase();
+      const timeout = options.timeoutMs || 60000;
+
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        ...(options.headers || {})
+      };
+
+      const result = await new Promise<{
+        redirect?: string;
+        status: number;
+        headers: Record<string, string>;
+        bytes: number;
+        filePath: string;
+        contentType?: string;
+      }>((resolve, reject) => {
+        const req = client.request(
+          {
+            hostname: url.hostname,
+            port: url.port || (isHttps ? 443 : 80),
+            path: `${url.pathname}${url.search}`,
+            method: method,
+            headers: headers,
+            agent: this.agent,
+            timeout: timeout
+          },
+          (res) => {
+            const statusCode = res.statusCode || 0;
+            const resHeaders: Record<string, string> = {};
+            for (const [k, v] of Object.entries(res.headers)) {
+              if (v) resHeaders[k] = Array.isArray(v) ? v.join(', ') : v;
+            }
+
+            // Handle HTTP redirects (301, 302, 303, 307, 308)
+            if ([301, 302, 303, 307, 308].includes(statusCode) && res.headers.location) {
+              const redirectUrl = new URL(res.headers.location, currentUrl).toString();
+              res.resume(); // Drain and discard
+              resolve({ redirect: redirectUrl, status: statusCode, headers: resHeaders, bytes: 0, filePath: destinationFilePath });
+              return;
+            }
+
+            if (statusCode < 200 || statusCode >= 300) {
+              res.resume();
+              reject(new Error(`Download failed with HTTP ${statusCode} ${res.statusMessage || ''} for ${currentUrl}`));
+              return;
+            }
+
+            const targetDir = path.dirname(destinationFilePath);
+            if (!fs.existsSync(targetDir)) {
+              fs.mkdirSync(targetDir, { recursive: true });
+            }
+
+            const fileWriteStream = fs.createWriteStream(destinationFilePath);
+
+            let stream: NodeJS.ReadableStream = res;
+            const encoding = res.headers['content-encoding'];
+            if (encoding === 'gzip') {
+              stream = res.pipe(zlib.createGunzip());
+            } else if (encoding === 'deflate') {
+              stream = res.pipe(zlib.createInflate());
+            } else if (encoding === 'br') {
+              stream = res.pipe(zlib.createBrotliDecompress());
+            }
+
+            let downloadedBytes = 0;
+            stream.on('data', (chunk: Buffer) => {
+              downloadedBytes += chunk.length;
+            });
+
+            stream.pipe(fileWriteStream);
+
+            fileWriteStream.on('finish', () => {
+              fileWriteStream.close(() => {
+                resolve({
+                  status: statusCode,
+                  headers: resHeaders,
+                  bytes: downloadedBytes,
+                  filePath: destinationFilePath,
+                  contentType: resHeaders['content-type']
+                });
+              });
+            });
+
+            fileWriteStream.on('error', (err) => {
+              fileWriteStream.close();
+              reject(err);
+            });
+
+            stream.on('error', (err) => {
+              fileWriteStream.close();
+              reject(err);
+            });
+          }
+        );
+
+        req.on('error', (err) => {
+          reject(err);
+        });
+
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error(`Download network timeout after ${timeout}ms for ${currentUrl}`));
+        });
+
+        req.end();
+      });
+
+      if (result.redirect) {
+        currentUrl = result.redirect;
+        redirectsCount++;
+        continue;
+      }
+
+      return result;
+    }
+
+    throw new Error(`Exceeded maximum redirects (${maxRedirects}) while downloading ${urlStr}`);
   }
 
   /**

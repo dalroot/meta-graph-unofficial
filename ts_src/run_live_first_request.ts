@@ -11,7 +11,7 @@ async function main() {
   console.log('[*] Initializing TwinGraph for First Live Safe Request...');
 
   // 1. Verify Circuit Breaker status
-  const cbPath = '/home/hokar/Documents/antigravity/silly-galileo/circuit_breaker.json';
+  const cbPath = '/home/hokar/Documents/antigravity/hopeful-bell/circuit_breaker.json';
   if (fs.existsSync(cbPath)) {
     const cb = JSON.parse(fs.readFileSync(cbPath, 'utf-8'));
     if (cb.tripped) {

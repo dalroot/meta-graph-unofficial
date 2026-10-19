@@ -9,7 +9,7 @@ import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { GraphUser, GraphInsightsResponse } from './types/graph.js';
 
-const DEFAULT_SESSION_PATH = '/home/hokar/Documents/antigravity/silly-galileo/instagram_session.json';
+const DEFAULT_SESSION_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/instagram_session.json';
 const IG_SIGNING_KEY = '6dc344682cc5cd2496191b26cc065e8c1b97bfb9cf1ad982798e2ee4e9d56262';
 
 export interface SessionData {

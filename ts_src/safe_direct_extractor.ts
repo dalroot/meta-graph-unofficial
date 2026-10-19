@@ -10,9 +10,9 @@ import { TwinTransport, TransportResponse } from './twins/transport.js';
 process.env.ALL_PROXY = process.env.ALL_PROXY || 'socks5://127.0.0.1:10808';
 process.env.HTTPS_PROXY = process.env.HTTPS_PROXY || 'socks5://127.0.0.1:10808';
 
-const CB_PATH = '/home/hokar/Documents/antigravity/silly-galileo/circuit_breaker.json';
-const SESSION_PATH = '/home/hokar/Documents/antigravity/silly-galileo/instagram_session.json';
-const OUTPUT_PATH = '/home/hokar/Documents/antigravity/silly-galileo/scratch/extracted_direct_threads.json';
+const CB_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/circuit_breaker.json';
+const SESSION_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/instagram_session.json';
+const OUTPUT_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/scratch/extracted_direct_threads.json';
 
 interface Participant {
   id: string;

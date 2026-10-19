@@ -16,7 +16,7 @@ import {
   formatMobileCookie
 } from './session_loader.js';
 
-export const DEFAULT_SESSION_PATH = '/home/hokar/Documents/antigravity/silly-galileo/instagram_session.json';
+export const DEFAULT_SESSION_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/instagram_session.json';
 export const IG_SIGNING_KEY = '6dc344682cc5cd2496191b26cc065e8c1b97bfb9cf1ad982798e2ee4e9d56262';
 export const IG_APP_ID_MOBILE = '1217981644879628';
 export const IG_APP_ID_WEB = '936619743392459';

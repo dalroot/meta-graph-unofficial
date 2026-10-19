@@ -8,12 +8,18 @@
 
 import { DeviceTwin } from './device_twin.js';
 import { GraphQLTwin } from './graphql_twin.js';
+import { DashboardTwin } from './dashboard_twin.js';
 import {
   GraphMedia,
   GraphInsightsResponse,
   PublishMediaParams,
   HardwareCodecProfile,
-  ParsedCaptionInfo
+  ParsedCaptionInfo,
+  GraphReelInsights,
+  GraphPostInsights,
+  ExtendedAnalyticsTimeframe,
+  CustomDateRange,
+  FilteredContentResponse
 } from '../types/graph.js';
 
 export class MediaTwin {
@@ -314,6 +320,39 @@ export class MediaTwin {
       audience: params.audience || 'followers_you_follow_back',
       status: 'ok'
     };
+  }
+
+  /**
+   * Retrieves granular reel retention and surface breakdown
+   * Telemetry backed: Second-by-second drop-off for followers vs non-followers
+   */
+  public async getGranularReelBreakdown(reelId: string): Promise<GraphReelInsights> {
+    const dashboard = new DashboardTwin(this.deviceTwin, { offlineMode: true });
+    return dashboard.getReelInsights(reelId);
+  }
+
+  /**
+   * Retrieves granular post surface breakdown and audience impressions
+   */
+  public async getGranularPostBreakdown(postId: string): Promise<GraphPostInsights> {
+    const dashboard = new DashboardTwin(this.deviceTwin, { offlineMode: true });
+    return dashboard.getPostInsights(postId);
+  }
+
+  /**
+   * Retrieves multi-dimensional content breakdown with category, timeframe and custom date range filtering
+   */
+  public async getContentBreakdownByTimeframe(
+    timeframe: ExtendedAnalyticsTimeframe = '30d',
+    customRange?: CustomDateRange,
+    category?: string
+  ): Promise<FilteredContentResponse> {
+    const dashboard = new DashboardTwin(this.deviceTwin, { offlineMode: true });
+    return dashboard.filterContentInsights({
+      timeframe,
+      custom_range: customRange,
+      category
+    });
   }
 }
 

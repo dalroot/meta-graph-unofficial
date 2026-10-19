@@ -34,7 +34,7 @@ async function inspectDirectInbox() {
   console.log('[*] ======================================================');
 
   // 1. Verify Circuit Breaker Status
-  const cbPath = '/home/hokar/Documents/antigravity/silly-galileo/circuit_breaker.json';
+  const cbPath = '/home/hokar/Documents/antigravity/hopeful-bell/circuit_breaker.json';
   if (fs.existsSync(cbPath)) {
     const cb = JSON.parse(fs.readFileSync(cbPath, 'utf-8'));
     if (cb.tripped) {
@@ -47,7 +47,7 @@ async function inspectDirectInbox() {
   }
 
   // 2. Instantiate TwinGraph & Transport
-  const sessionPath = '/home/hokar/Documents/antigravity/silly-galileo/instagram_session.json';
+  const sessionPath = '/home/hokar/Documents/antigravity/hopeful-bell/instagram_session.json';
   const tg = new TwinGraph({ sessionPath });
   const transport = new TwinTransport();
 
@@ -111,7 +111,7 @@ async function inspectDirectInbox() {
   console.log(`[+] Clean HTTP 200 OK received! Payload size: ${resp.data.length} bytes`);
 
   // Save raw response for non-invasive offline analysis
-  const dumpPath = '/home/hokar/Documents/antigravity/silly-galileo/scratch/direct_inbox_raw.html';
+  const dumpPath = '/home/hokar/Documents/antigravity/hopeful-bell/scratch/direct_inbox_raw.html';
   fs.writeFileSync(dumpPath, resp.data, 'utf-8');
   console.log(`[+] Raw response persisted to ${dumpPath}`);
 
@@ -277,7 +277,7 @@ async function inspectDirectInbox() {
   console.log('======================================================\n');
 
   // Also persist result artifact
-  const resultArtifactPath = '/home/hokar/Documents/antigravity/silly-galileo/scratch/direct_inbox_graph_result.json';
+  const resultArtifactPath = '/home/hokar/Documents/antigravity/hopeful-bell/scratch/direct_inbox_graph_result.json';
   fs.writeFileSync(resultArtifactPath, JSON.stringify(graphResponse, null, 2), 'utf-8');
   console.log(`[+] Structured Meta Graph API v21.0 response saved to ${resultArtifactPath}`);
 }

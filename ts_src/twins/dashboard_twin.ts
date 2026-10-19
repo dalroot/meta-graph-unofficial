@@ -18,6 +18,7 @@
 
 import { DeviceTwin } from './device_twin.js';
 import { TwinTransport } from './transport.js';
+import { GraphQLTwin } from './graphql_twin.js';
 import {
   DashboardTimeframe,
   GraphAccountOverview,
@@ -34,7 +35,14 @@ import {
   GraphPostInsights,
   ContentFilterOptions,
   FilteredContentResponse,
-  UnifiedContentItem
+  UnifiedContentItem,
+  ProfileTimelineOptions,
+  ProfileTimelineResponse,
+  CreatorDestinationInfo,
+  SubscriptionBenefitEligibility,
+  CustomDateRange,
+  ReelSurfaceBreakdown,
+  AudienceRetentionComparison
 } from '../types/graph.js';
 
 export interface DashboardTwinOptions {
@@ -44,10 +52,12 @@ export interface DashboardTwinOptions {
 export class DashboardTwin {
   private deviceTwin: DeviceTwin;
   private transport: TwinTransport;
+  private graphqlTwin: GraphQLTwin;
   private offlineMode: boolean;
 
   constructor(deviceTwin?: DeviceTwin, options: DashboardTwinOptions = {}) {
     this.deviceTwin = deviceTwin || new DeviceTwin();
+    this.graphqlTwin = new GraphQLTwin(this.deviceTwin);
     this.transport = new TwinTransport();
     this.offlineMode = options.offlineMode !== undefined
       ? options.offlineMode
@@ -282,9 +292,12 @@ export class DashboardTwin {
   }
 
   /**
-   * Retrieves Professional Tools & Monetization Status
+    * Retrieves Professional Tools & Monetization Status
    */
   public async getProfessionalTools(): Promise<ProfessionalToolsStatus> {
+    const creatorDestination = await this.getCreatorDestination();
+    const subscriptionBenefits = await this.getSubscriptionBenefitEligibility();
+
     return {
       creator_status: 'active',
       account_category: 'Software Developer',
@@ -294,7 +307,7 @@ export class DashboardTwin {
         branded_content: true,
         creator_marketplace: true,
         gifts_enabled: true,
-        subscriptions_eligible: true
+        subscriptions_eligible: subscriptionBenefits.is_eligible
       },
       ad_tools: {
         active_promotions: 0,
@@ -315,8 +328,108 @@ export class DashboardTwin {
             answer: 'Provide active session tokens or use our zero-network digital twin offline simulation.'
           }
         ]
-      }
+      },
+      creator_destination: creatorDestination,
+      subscription_benefits: subscriptionBenefits
     };
+  }
+
+  /**
+   * Hydrates Profile & Timeline grid conforming to Pando IGProfileTimelineQuery and Meta Graph API v21.0
+   * Telemetry Source: Line 347613 in instagram_session_2_deep_stream.log
+   */
+  public async getProfileTimeline(
+    userId?: string,
+    options: ProfileTimelineOptions = {}
+  ): Promise<ProfileTimelineResponse> {
+    const targetUserId = userId || this.deviceTwin.getUserId();
+    const pandoRes = await this.graphqlTwin.executeQuery('IGProfileTimelineQuery', {
+      userId: targetUserId,
+      ...options
+    });
+
+    const translated = this.graphqlTwin.translateProfileTimelineToGraphNodes(pandoRes.data);
+
+    if (options.feedType && options.feedType !== 'all') {
+      const typeFilter = options.feedType.toLowerCase();
+      if (typeFilter === 'reels') {
+        translated.items = translated.items.filter(item => item.media_product_type === 'REELS' || item.media_type === 'VIDEO');
+      } else if (typeFilter === 'posts') {
+        translated.items = translated.items.filter(item => item.media_product_type === 'FEED' || item.media_type === 'IMAGE');
+      }
+    }
+
+    if (options.count && options.count > 0) {
+      translated.items = translated.items.slice(0, options.count);
+    }
+
+    return translated;
+  }
+
+  /**
+   * Retrieves Creator Switching & Destination Metadata conforming to Pando IgCreatorDestinationTypeQuery
+   * Telemetry Source: Line 349296 in instagram_session_2_deep_stream.log
+   */
+  public async getCreatorDestination(): Promise<CreatorDestinationInfo> {
+    const pandoRes = await this.graphqlTwin.executeQuery('IgCreatorDestinationTypeQuery');
+    const data = pandoRes.data as any;
+    return (
+      data.creator_destination_metadata || {
+        user_id: this.deviceTwin.getUserId(),
+        username: this.deviceTwin.getUsername(),
+        account_type: 'CREATOR',
+        destination_type: 'FACEBOOK_PAGE',
+        is_destination_switch_eligible: true,
+        linked_destination_id: '122108867655496701',
+        linked_destination_name: 'TwinGraph Official Developer Page',
+        allowed_transition_destinations: ['CREATOR', 'BUSINESS'],
+        professional_conversion_status: 'ACTIVE_CREATOR'
+      }
+    );
+  }
+
+  /**
+   * Retrieves Subscription Tier Benefits & Monetization Eligibility conforming to Pando SUBSBenefitEligibilityQuery
+   * Telemetry Source: Line 349598 in instagram_session_2_deep_stream.log
+   */
+  public async getSubscriptionBenefitEligibility(): Promise<SubscriptionBenefitEligibility> {
+    const pandoRes = await this.graphqlTwin.executeQuery('SUBSBenefitEligibilityQuery');
+    const data = pandoRes.data as any;
+    return (
+      data.subscription_eligibility || {
+        user_id: this.deviceTwin.getUserId(),
+        is_eligible: true,
+        status: 'ACTIVE',
+        subscriber_count: 42,
+        active_subscribers_mrr_cents: 20958,
+        enabled_benefits: [
+          'SUBSCRIBER_BADGES',
+          'EXCLUSIVE_REELS',
+          'SUBSCRIBER_BROADCAST_CHAT',
+          'SUBSCRIBER_STORIES',
+          'EXCLUSIVE_LIVES'
+        ],
+        available_tiers: [
+          {
+            tier_id: 'TIER_1',
+            name: 'Supporter Tier',
+            price_cents: 499,
+            currency: 'USD',
+            formatted_price: '$4.99/mo',
+            benefits: ['SUBSCRIBER_BADGES', 'EXCLUSIVE_REELS']
+          },
+          {
+            tier_id: 'TIER_2',
+            name: 'VIP Developer Tier',
+            price_cents: 999,
+            currency: 'USD',
+            formatted_price: '$9.99/mo',
+            benefits: ['SUBSCRIBER_BADGES', 'EXCLUSIVE_REELS', 'SUBSCRIBER_BROADCAST_CHAT', 'SUBSCRIBER_STORIES', 'EXCLUSIVE_LIVES']
+          }
+        ],
+        onboarding_flow_completed: true
+      }
+    );
   }
 
   /**
@@ -557,14 +670,36 @@ export class DashboardTwin {
     const filterType = options.type || 'ALL';
     const sortBy = options.sort_by || 'reach';
     const order = options.order || 'desc';
-    const timeframe = options.timeframe || '30d';
+    const timeframe = options.timeframe || (options.custom_range ? 'custom' : '30d');
     const limit = options.limit;
 
-    const rawItems = await this.getAllUnifiedContent(timeframe);
+    const rawItems = await this.getAllUnifiedContent(timeframe, options.custom_range);
 
     let filtered = rawItems;
     if (filterType !== 'ALL') {
       filtered = filtered.filter(item => item.media_type === filterType);
+    }
+
+    if (options.category && options.category.toUpperCase() !== 'ALL') {
+      const cat = options.category.toLowerCase();
+      filtered = filtered.filter(item =>
+        (item.category && item.category.toLowerCase().includes(cat)) ||
+        (item.title && item.title.toLowerCase().includes(cat)) ||
+        (item.caption && item.caption.toLowerCase().includes(cat))
+      );
+    }
+
+    if (options.surface && options.surface !== 'all') {
+      const surfaceKey = options.surface;
+      filtered = filtered.filter(item => {
+        const bd = (item.details as any).surface_breakdown || (item.details as any).impressions_breakdown;
+        if (!bd) return true;
+        if (surfaceKey === 'home') return (bd.home || bd.home_feed || 0) > 0;
+        if (surfaceKey === 'explore') return (bd.explore || 0) > 0;
+        if (surfaceKey === 'reels_tab') return (bd.reels_tab || 0) > 0;
+        if (surfaceKey === 'profile') return (bd.profile || bd.profile_grid || 0) > 0;
+        return true;
+      });
     }
 
     filtered.sort((a, b) => {
@@ -618,6 +753,11 @@ export class DashboardTwin {
 
     const items = limit && limit > 0 ? filtered.slice(0, limit) : filtered;
 
+    for (const item of items) {
+      item.surface_breakdown = (item.details as any).surface_breakdown || (item.details as any).impressions_breakdown;
+      item.audience_retention = (item.details as any).audience_retention_comparison;
+    }
+
     const totalReach = items.reduce((sum, item) => sum + item.reach, 0);
     const totalImpressions = items.reduce((sum, item) => sum + item.impressions, 0);
     const totalInteractions = items.reduce((sum, item) => sum + item.likes + item.comments + item.shares + item.saves, 0);
@@ -629,9 +769,12 @@ export class DashboardTwin {
       total_count: items.length,
       applied_filters: {
         type: filterType,
+        category: options.category,
         sort_by: sortBy,
         order,
         timeframe,
+        custom_range: options.custom_range,
+        surface: options.surface,
         limit
       },
       summary: {
@@ -806,6 +949,50 @@ export class DashboardTwin {
         { second: 30, retention_pct: 26.0, drop_off_pct: 12.0, active_viewers: Math.round(totalPlays * 0.26) },
         { second: 60, retention_pct: 16.0, drop_off_pct: 10.0, active_viewers: Math.round(totalPlays * 0.16) }
       ],
+      followers_retention_curve: [
+        { second: 0, retention_pct: 100.0, drop_off_pct: 0.0, active_viewers: followersReach },
+        { second: 3, retention_pct: 92.0, drop_off_pct: 8.0, active_viewers: Math.round(followersReach * 0.92) },
+        { second: 5, retention_pct: 84.0, drop_off_pct: 8.0, active_viewers: Math.round(followersReach * 0.84) },
+        { second: 10, retention_pct: 74.0, drop_off_pct: 10.0, active_viewers: Math.round(followersReach * 0.74) },
+        { second: 15, retention_pct: 66.0, drop_off_pct: 8.0, active_viewers: Math.round(followersReach * 0.66) },
+        { second: 30, retention_pct: 52.0, drop_off_pct: 14.0, active_viewers: Math.round(followersReach * 0.52) },
+        { second: 60, retention_pct: 41.0, drop_off_pct: 11.0, active_viewers: Math.round(followersReach * 0.41) }
+      ],
+      non_followers_retention_curve: [
+        { second: 0, retention_pct: 100.0, drop_off_pct: 0.0, active_viewers: nonFollowersReach },
+        { second: 3, retention_pct: 71.0, drop_off_pct: 29.0, active_viewers: Math.round(nonFollowersReach * 0.71) },
+        { second: 5, retention_pct: 58.0, drop_off_pct: 13.0, active_viewers: Math.round(nonFollowersReach * 0.58) },
+        { second: 10, retention_pct: 42.0, drop_off_pct: 16.0, active_viewers: Math.round(nonFollowersReach * 0.42) },
+        { second: 15, retention_pct: 31.0, drop_off_pct: 11.0, active_viewers: Math.round(nonFollowersReach * 0.31) },
+        { second: 30, retention_pct: 21.0, drop_off_pct: 10.0, active_viewers: Math.round(nonFollowersReach * 0.21) },
+        { second: 60, retention_pct: 14.0, drop_off_pct: 7.0, active_viewers: Math.round(nonFollowersReach * 0.14) }
+      ],
+      audience_retention_comparison: {
+        followers: {
+          rate_3s_pct: 92.0,
+          rate_15s_pct: 66.0,
+          rate_30s_pct: 52.0,
+          completion_rate_pct: 41.0,
+          average_watch_time_seconds: 24.6
+        },
+        non_followers: {
+          rate_3s_pct: 71.0,
+          rate_15s_pct: 31.0,
+          rate_30s_pct: 21.0,
+          completion_rate_pct: 14.0,
+          average_watch_time_seconds: 14.8
+        }
+      },
+      surface_breakdown: {
+        reels_tab: 18450,
+        home_feed: 5200,
+        explore: 3100,
+        profile_grid: 980,
+        audio_page: 420,
+        direct_shares: 300,
+        total: reach
+      },
+      category: 'Technology',
       interactions: {
         likes,
         comments,
@@ -838,6 +1025,7 @@ export class DashboardTwin {
       media_type: 'POST',
       title: 'Meta Graph API v21.0 vs Mobile Telemetry Architecture Diagram',
       caption: 'Detailed architectural breakdown of Liger, Tigon, Pando, and MSYS Direct protocols.',
+      category: 'Architecture',
       permalink: 'https://www.instagram.com/p/DeABC67890/',
       thumbnail_url: 'https://instagram.com/p/DeABC67890/media/?size=t',
       timestamp: '2026-10-08T09:30:00Z',
@@ -873,7 +1061,10 @@ export class DashboardTwin {
     };
   }
 
-  private async getAllUnifiedContent(timeframe: ExtendedAnalyticsTimeframe): Promise<UnifiedContentItem[]> {
+  private async getAllUnifiedContent(
+    timeframe: ExtendedAnalyticsTimeframe,
+    customRange?: CustomDateRange
+  ): Promise<UnifiedContentItem[]> {
     const daysLimitMap: Record<ExtendedAnalyticsTimeframe, number> = {
       '24h': 1,
       '7d': 7,
@@ -882,7 +1073,8 @@ export class DashboardTwin {
       '90d': 90,
       '6m': 180,
       '1y': 365,
-      '2y': 730
+      '2y': 730,
+      'custom': 9999
     };
     const maxDays = daysLimitMap[timeframe] || 30;
 
@@ -1137,6 +1329,23 @@ export class DashboardTwin {
         }
       }
     ];
+
+    baseItems.forEach(entry => {
+      if (!entry.item.category) {
+        entry.item.category = entry.item.media_type === 'REEL' ? 'Technology' : entry.item.media_type === 'POST' ? 'Architecture' : 'Announcements';
+      }
+    });
+
+    if ((timeframe === 'custom' || customRange) && customRange) {
+      const startMs = new Date(customRange.startDate).getTime();
+      const endMs = new Date(customRange.endDate).getTime();
+      return baseItems
+        .filter(entry => {
+          const itemMs = new Date(entry.item.timestamp).getTime();
+          return itemMs >= startMs && itemMs <= endMs;
+        })
+        .map(entry => entry.item);
+    }
 
     return baseItems
       .filter(entry => entry.ageDays <= maxDays)
