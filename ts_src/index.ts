@@ -38,3 +38,7 @@ export {
 } from './twins/index.js';
 
 export { DigitalTwinBridge } from './digital_twin_bridge.js';
+export { GraphCatalog, FieldProjector } from './schema/index.js';
+export { GraphRouter } from './router/graph_router.js';
+export { GraphMediaProxy, GraphUserProxy, GraphConversationProxy } from './nodes/node_proxies.js';
+export { UniversalDownloader, MediaDownloadResult } from './utils/downloader.js';

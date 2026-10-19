@@ -49,49 +49,48 @@ Most unofficial automation tools rely on reverse-engineered mobile endpoints tha
 
 ```
 meta-graph-unofficial/
-├── .github/
-│   └── workflows/
-│       └── ci.yml                     # Automated Node test & Go build pipeline
-├── assets/
-│   └── banner.png                     # Official project social preview banner
+├── ts_src/                            # Modern TypeScript TwinGraph SDK
+│   ├── twin_graph.ts                  # Unified TwinGraph Client (Meta Graph API v21.0)
+│   ├── index.ts                       # Public SDK entrypoint
+│   ├── schema/                        # Declarative In-Memory SQLite Schema Catalog
+│   │   ├── catalog_schema.ts          # DDL tables & official Meta v21.0 seed definitions
+│   │   ├── graph_catalog.ts           # Schema registry powered by Node.js native node:sqlite
+│   │   ├── field_projector.ts         # Dynamic ?fields= projection & Android client cleanup
+│   │   └── index.ts
+│   ├── router/                        # Versioned Meta Graph API Route Dispatcher
+│   │   ├── graph_router.ts            # Dispatches /v21.0/{node}/{edge} to twins
+│   │   └── index.ts
+│   ├── nodes/                         # Fluent Node Proxies (Meta Business SDK style)
+│   │   ├── node_proxies.ts            # GraphMediaProxy, GraphUserProxy, GraphConversationProxy
+│   │   └── index.ts
+│   ├── utils/                         # Zero-Dependency Native Utilities
+│   │   ├── downloader.ts              # CDN media downloader, high-res poster & MP3 extractor
+│   │   └── index.ts
+│   ├── profiles/                      # Hardware & Browser Digital Twin Profiles
+│   │   └── device_profiles.ts         # Redmi Note 13 4G + Clean Web Chrome
+│   ├── twins/                         # Empirical Engine Twins
+│   │   ├── device_twin.ts             # Redmi Note 13 4G Hardware Twin (Tigon/Liger HMAC)
+│   │   ├── web_twin.ts                # Web RelayModern Twin (Direct & Comments)
+│   │   ├── direct_twin.ts             # Direct Messaging & Pando GraphQL
+│   │   ├── media_twin.ts              # Media, Carousel, Story & Insights Twin
+│   │   ├── discovery_twin.ts          # Hashtag, Search & Explore Twin
+│   │   ├── dashboard_twin.ts          # Professional Dashboard & Monetization
+│   │   └── transport.ts               # HTTP transport with anti-ban jitter & circuit breaker
+│   └── types/
+│       └── graph.ts                   # 1:1 Meta Graph API v21.0 Type Definitions
+├── evidence/                          # Sanitized Empirical REA Evidence Ledger
+│   ├── raw_telemetry/                 # 161,827+ lines of live Redmi Note 13 telemetry
+│   ├── RESOLVED_ENDPOINTS_CATALOG.md  # 57 verified endpoints with 100% REA backing
+│   └── web_comment_evidence.json      # Live web GraphQL comment traces
 ├── docs/
+│   ├── VERIFIED_CAPABILITIES_AND_ROADMAP.md # 30 verified live capabilities ledger
 │   ├── CONTRIBUTING.md                # Inviolable project rules & REA standards
-│   ├── REA_METHODOLOGY.md             # Reverse engineering methodology & ledger
-│   └── SESSION_EXTRACTION_GUIDE.md    # Session token extraction instructions
-├── engine/                            # Optional Go High-Performance Transport
-│   ├── go.mod                         # Go module definition
-│   └── main.go                        # Core network transport handler
-├── evidence/                          # Sanitized HTTP/GraphQL traces (REA Ledger)
-│   ├── REA_MANIFEST.md                # Master registry of verified operations
-│   ├── instagram_upload_evidence.json # Photo feed & story upload trace
-│   ├── instagram_inbox_mentions_evidence.json # News inbox & story mentions trace
-│   ├── comments_evidence.json         # Real-time comment stream trace
-│   └── facebook_graphql_evidence.json # Facebook GraphQL posting trace
-├── examples/
-│   └── basic_usage.js                 # Executable walkthrough script
-├── templates/
-│   └── os_profiles.json               # Pre-calibrated OS & browser templates
-├── src/
-│   ├── index.js                       # Unified MetaGraph entry point
-│   ├── core/
-│   │   ├── http.js                    # Core HTTP client with human jitter
-│   │   ├── profile.js                 # Profile loader helper
-│   │   └── utils.js                   # Jitter and cookie parsing utilities
-│   ├── profiles/
-│   │   └── manager.js                 # Dynamic multi-OS ProfileManager
-│   ├── instagram/
-│   │   ├── client.js                  # Composed InstagramClient
-│   │   └── mixins/
-│   │       ├── auth.js                # Session management & credential validation
-│   │       ├── user.js                # Profile & user metadata queries
-│   │       ├── comment.js             # Media comment retrieval & stream
-│   │       └── activity.js            # News inbox, story mentions, & badges
-│   └── facebook/
-│       ├── client.js                  # Composed FacebookClient
-│       └── mixins/
-│           └── post.js                # Native GraphQL timeline publishing
-├── test/
-│   └── client.test.js                 # Node.js native test suite
+│   └── SESSION_EXTRACTION_GUIDE.md    # Session extraction instructions
+├── scripts/
+│   ├── run_4_safe_tests.ts            # 4 safe read-only tests with v21.0 projection
+│   └── test_schema_engine.ts          # Unit tests for SQLite catalog & router
+├── instagram_session.json             # Validated session tokens
+├── circuit_breaker.json               # Anti-ban safety circuit breaker
 └── package.json
 ```
 
@@ -179,38 +178,48 @@ npm install
 
 ## Quick Start Guide
 
-### 1. Instagram Comment Stream
+### 1. Unified TwinGraph Client (Meta Graph API v21.0)
 
-```javascript
-import MetaGraph from 'meta-graph-unofficial';
+```typescript
+import { TwinGraph } from 'meta-graph-unofficial';
 
-const mg = new MetaGraph({ osProfile: 'linux_x86_64_chrome' });
-
-mg.instagram.setSession({
+// Initialize the twin with active session cookies
+const tg = new TwinGraph({
   cookies: 'sessionid=YOUR_SESSION_ID; ds_user_id=YOUR_USER_ID; csrftoken=YOUR_CSRF_TOKEN;',
-  csrfToken: 'YOUR_CSRF_TOKEN',
-  dsUserId: 'YOUR_USER_ID'
 });
 
-// Fetch comments for a media post
-const data = await mg.instagram.getMediaComments('4007195903156614326');
-console.log(`Retrieved ${data.comments.length} comments.`);
+// Fluent Node Proxy: Media Node
+const media = tg.nodeMedia('Db-mzoXM6ik');
 
-for (const c of data.comments) {
-  console.log(`[${c.username}]: ${c.text}`);
-}
+// Fetch media with exact Graph API field projection
+const mediaData = await media.get(['id', 'caption', 'media_type', 'media_url', 'like_count']);
+console.log('Clean v21.0 Media Payload:', mediaData);
+
+// Direct download media (video/audio/cover poster) without external scripts
+const downloaded = await media.download('./downloads', 'both');
+console.log('Saved files:', downloaded);
 ```
 
-### 2. Facebook GraphQL Post
+### 2. Direct Messaging & Fluent Conversation Proxy
 
-```javascript
-mg.facebook.setSession({
-  cookies: 'c_user=YOUR_C_USER; xs=YOUR_XS_TOKEN;',
-  fbDtsg: 'YOUR_FB_DTSG',
-  cUser: 'YOUR_C_USER'
-});
+```typescript
+// Fluent Conversation Proxy: Threads & Direct Messages
+const thread = tg.nodeConversation('17841400000000000');
 
-const postResult = await mg.facebook.publishTextPost('Automated publishing via meta-graph-unofficial');
+// Read inbox messages
+const messages = await thread.getMessages(10);
+console.log(`Retrieved ${messages.length} messages.`);
+
+// Send message without browser automation
+await thread.sendMessage('Hello from TwinGraph v21.0!');
+```
+
+### 3. Dynamic Versioned Router (`/v21.0/...`)
+
+```typescript
+// Query any verified node or edge directly using official v21.0 paths:
+const userProfile = await tg.get('/v21.0/me', { fields: 'id,username,followers_count,biography' });
+const mediaComments = await tg.get('/v21.0/Db-mzoXM6ik/comments', { fields: 'id,text,from' });
 ```
 
 ---

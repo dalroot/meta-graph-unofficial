@@ -17,3 +17,4 @@ evidence/raw_telemetry/
 dist/
 scratch/
 circuit_breaker.json
+metatwin-downloader-bot/

@@ -15,6 +15,10 @@ import { MediaTwin } from './twins/media_twin.js';
 import { WebTwin } from './twins/web_twin.js';
 import { DiscoveryTwin } from './twins/discovery_twin.js';
 import { DashboardTwin } from './twins/dashboard_twin.js';
+import { GraphRouter } from './router/graph_router.js';
+import { GraphMediaProxy, GraphUserProxy, GraphConversationProxy } from './nodes/node_proxies.js';
+import { GraphCatalog } from './schema/graph_catalog.js';
+import { UniversalDownloader, MediaDownloadResult } from './utils/downloader.js';
 import {
   GraphUser,
   GraphMedia,
@@ -66,6 +70,7 @@ export class TwinGraph {
   private _web: WebTwin;
   private _discovery: DiscoveryTwin;
   private _dashboard: DashboardTwin;
+  private _router: GraphRouter;
 
   private accessToken: string;
   private apiVersion: string;
@@ -87,6 +92,16 @@ export class TwinGraph {
     this._web = new WebTwin(undefined, typeof sessionInput === 'string' ? sessionInput : DEFAULT_SESSION_PATH);
     this._discovery = new DiscoveryTwin(this._device, { offlineMode: this.offlineMode });
     this._dashboard = new DashboardTwin(this._device, { offlineMode: this.offlineMode });
+
+    // Initialize the declarative Meta Graph v21.0 Router & SQLite Catalog
+    this._router = new GraphRouter({
+      device: this._device,
+      web: this._web,
+      media: this._media,
+      direct: this._direct,
+      discovery: this._discovery,
+      dashboard: this._dashboard
+    });
   }
 
   // --- Sub-Twin Getters ---
@@ -119,6 +134,29 @@ export class TwinGraph {
     return this._dashboard;
   }
 
+  public get router(): GraphRouter {
+    return this._router;
+  }
+
+  public get catalog(): GraphCatalog {
+    return GraphCatalog.getInstance();
+  }
+
+  /**
+   * Fluent Node Accessors (Official Facebook Business SDK 1:1 Parity)
+   */
+  public nodeMedia(id: string): GraphMediaProxy {
+    return new GraphMediaProxy(id, this._router);
+  }
+
+  public nodeUser(id: string = 'me'): GraphUserProxy {
+    return new GraphUserProxy(id, this._router);
+  }
+
+  public nodeConversation(id: string): GraphConversationProxy {
+    return new GraphConversationProxy(id, this._router);
+  }
+
   /**
    * Official Standard Meta Graph API Method
    * Matches official Meta JavaScript SDK FB.api() 1:1
@@ -147,8 +185,14 @@ export class TwinGraph {
       params = methodOrParams;
     }
 
-    // Normalize path by stripping leading slash and version prefix if present
+    // Normalize path by stripping leading slash
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
+
+    // If path targets versioned Graph API (e.g. /v21.0/...), dispatch directly through declarative GraphRouter
+    if (cleanPath.startsWith('/v21.0/') || cleanPath.startsWith('/v22.0/')) {
+      return this._router.dispatch<T>(cleanPath, method, params);
+    }
+
     const unversioned = cleanPath.replace(new RegExp(`^\\/${this.apiVersion}`), '');
 
     // 1. Route: /me or /{current_user_id}
@@ -576,6 +620,15 @@ export class TwinGraph {
   }
 
   /**
+   * Retrieves a single media object with optional field projection
+   * Official Meta Graph API v21.0 Mapping: GET /{media-id}
+   */
+  public async getMedia(mediaId: string, fields?: string | string[]): Promise<GraphMedia> {
+    const fieldParam = Array.isArray(fields) ? fields.join(',') : fields;
+    return this._router.dispatch<GraphMedia>(`/${mediaId}`, 'GET', { fields: fieldParam });
+  }
+
+  /**
    * Posts a comment on a media object
    * Official Meta Graph API v21.0 Mapping: POST /{media-id}/comments
    * Modes:
@@ -640,6 +693,18 @@ export class TwinGraph {
       return this._web.sendDirectMessage(threadId, message);
     }
     return this._direct.sendMessage(threadId, message, options);
+  }
+
+  /**
+   * Downloads high-resolution media (Video, MP3 Audio, High-Res Cover Image)
+   * Pure native SDK method — zero scripts required.
+   */
+  public async downloadMedia(
+    shortcodeOrUrl: string,
+    options?: { downloadVideo?: boolean; downloadAudio?: boolean; downloadPhoto?: boolean; outputDir?: string }
+  ): Promise<MediaDownloadResult> {
+    const downloader = new UniversalDownloader();
+    return downloader.downloadMedia(shortcodeOrUrl, options);
   }
 
   // --- Backward Compatibility Convenience Methods ---
