@@ -15,6 +15,8 @@ export {
   GraphQLTwin,
   DirectTwin,
   MediaTwin,
+  WebTwin,
+  WebSessionData,
   DiscoveryTwin,
   DiscoveryTwinOptions,
   DashboardTwin,

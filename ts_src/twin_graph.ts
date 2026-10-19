@@ -12,6 +12,7 @@ import { DeviceTwin, DEFAULT_SESSION_PATH } from './twins/device_twin.js';
 import { GraphQLTwin } from './twins/graphql_twin.js';
 import { DirectTwin } from './twins/direct_twin.js';
 import { MediaTwin } from './twins/media_twin.js';
+import { WebTwin } from './twins/web_twin.js';
 import { DiscoveryTwin } from './twins/discovery_twin.js';
 import { DashboardTwin } from './twins/dashboard_twin.js';
 import {
@@ -53,7 +54,8 @@ import {
   SubscriptionBenefitEligibility,
   FollowingListOptions,
   FollowingListResponse,
-  GraphComment
+  GraphComment,
+  DirectSendMessageResponse
 } from './types/graph.js';
 
 export class TwinGraph {
@@ -61,6 +63,7 @@ export class TwinGraph {
   private _graphql: GraphQLTwin;
   private _direct: DirectTwin;
   private _media: MediaTwin;
+  private _web: WebTwin;
   private _discovery: DiscoveryTwin;
   private _dashboard: DashboardTwin;
 
@@ -75,12 +78,13 @@ export class TwinGraph {
     this.baseUrl = options.baseUrl || 'http://localhost:8080';
     this.offlineMode = options.offlineMode ?? true;
 
-    // Initialize the 6 harmonious sub-twins
+    // Initialize the harmonious sub-twins
     const sessionInput = options.mobileSession || options.sessionPath || DEFAULT_SESSION_PATH;
     this._device = new DeviceTwin(sessionInput);
     this._graphql = new GraphQLTwin(this._device);
     this._direct = new DirectTwin(this._device, { offlineMode: this.offlineMode });
     this._media = new MediaTwin(this._device, this._graphql);
+    this._web = new WebTwin(undefined, typeof sessionInput === 'string' ? sessionInput : DEFAULT_SESSION_PATH);
     this._discovery = new DiscoveryTwin(this._device, { offlineMode: this.offlineMode });
     this._dashboard = new DashboardTwin(this._device, { offlineMode: this.offlineMode });
   }
@@ -101,6 +105,10 @@ export class TwinGraph {
 
   public get media(): MediaTwin {
     return this._media;
+  }
+
+  public get web(): WebTwin {
+    return this._web;
   }
 
   public get discovery(): DiscoveryTwin {
@@ -570,10 +578,18 @@ export class TwinGraph {
   /**
    * Posts a comment on a media object
    * Official Meta Graph API v21.0 Mapping: POST /{media-id}/comments
-   * Authentic Mobile Endpoint: POST https://i.instagram.com/api/v1/media/{cleanMediaId}/comment/
-   * Citations: Line 441786 (layout_comment_thread_post_button_icon, handler X.0GYp)
+   * Modes:
+   *  - 'web' (default if web session active): Authentic RelayModern GraphQL (PolarisPostCommentInputRevampedMutation)
+   *  - 'mobile': Authentic Mobile Liger Endpoint (POST /api/v1/media/{cleanMediaId}/comment/)
    */
-  public async postComment(mediaId: string, message: string): Promise<GraphComment> {
+  public async postComment(
+    mediaId: string,
+    message: string,
+    options?: { mode?: 'mobile' | 'web'; shortcode?: string; parentCommentId?: string }
+  ): Promise<GraphComment> {
+    if (options?.mode === 'web' || (!this._device.hasActiveSession() && this._web.hasActiveSession())) {
+      return this._web.postComment(mediaId, message, options);
+    }
     return this._media.postComment(mediaId, message);
   }
 
@@ -587,6 +603,43 @@ export class TwinGraph {
     paging?: any;
   }> {
     return this._media.getComments(mediaId, options);
+  }
+
+  /**
+   * Retrieves messages within a conversation thread
+   * Official Meta Graph API v21.0 Mapping: GET /{conversation-id}/messages
+   * Routes to Web GraphQL (IGDThreadDetailQuery) when web session active, or Mobile MSYS
+   */
+  public async getThreadMessages(
+    threadId: string,
+    options?: { limit?: number; mode?: 'mobile' | 'web' }
+  ): Promise<GraphConversation> {
+    if (options?.mode === 'mobile') {
+      return this._direct.getThread(threadId);
+    }
+    if (options?.mode === 'web' || this._web.hasActiveSession()) {
+      return this._web.getThreadMessages(threadId, options);
+    }
+    return this._direct.getThread(threadId);
+  }
+
+  /**
+   * Sends a direct message to a conversation thread
+   * Official Meta Graph API v21.0 Mapping: POST /{conversation-id}/messages
+   * Routes to Web GraphQL (IGDirectTextSendMutation) when web session active, or Mobile MSYS (broadcast/text)
+   */
+  public async sendDirectMessage(
+    threadId: string,
+    message: string,
+    options?: { mode?: 'mobile' | 'web'; clientContext?: string; recipientUserId?: string }
+  ): Promise<DirectSendMessageResponse> {
+    if (options?.mode === 'mobile') {
+      return this._direct.sendMessage(threadId, message, options);
+    }
+    if (options?.mode === 'web' || this._web.hasActiveSession()) {
+      return this._web.sendDirectMessage(threadId, message);
+    }
+    return this._direct.sendMessage(threadId, message, options);
   }
 
   // --- Backward Compatibility Convenience Methods ---

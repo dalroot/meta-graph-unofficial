@@ -9,6 +9,7 @@
 import * as fs from 'node:fs';
 import * as crypto from 'node:crypto';
 import { DeviceFingerprint, SessionTokens } from '../types/graph.js';
+import { TwinProfileRegistry, MobileDeviceProfile } from '../profiles/index.js';
 import {
   MobileSession,
   parseMobileSession,
@@ -44,25 +45,29 @@ export class DeviceTwin {
   private mobileSession: MobileSession;
   private fingerprint: DeviceFingerprint;
 
-  constructor(sessionInput: string | MobileSession | DeviceTwinSession | Record<string, any> = DEFAULT_SESSION_PATH) {
-    // 1. Initialize verified Redmi Note 13 4G hardware fingerprint
+  constructor(
+    sessionInput: string | MobileSession | DeviceTwinSession | Record<string, any> = DEFAULT_SESSION_PATH,
+    customProfile?: MobileDeviceProfile
+  ) {
+    // 1. Initialize verified mobile hardware profile dynamically (default: Redmi Note 13 4G)
+    const activeProfile = customProfile || TwinProfileRegistry.getDefaultMobile();
     this.fingerprint = {
-      brand: 'Redmi',
-      manufacturer: 'Xiaomi',
-      model: '23129RAA4G',
-      device_code: 'sapphire',
-      board: 'bengal',
-      soc_model: 'SM6225 (Snapdragon 680 4G)',
-      chipset: 'qcom',
-      android_id: '556f8db9eada6d9c',
-      os_release: '15',
-      os_sdk_int: 35,
-      build_id: 'AQ3A.240829.003',
-      resolution: '1080x2400',
-      density_dpi: 440,
-      user_agent: 'Instagram 451.0.0.53.80 Android (35/15; 440dpi; 1080x2400; Xiaomi; 23129RAA4G; sapphire; qcom; en_US; 385713116)',
-      app_version: '451.0.0.53.80',
-      app_version_code: 385713116
+      brand: activeProfile.brand,
+      manufacturer: activeProfile.manufacturer,
+      model: activeProfile.model,
+      device_code: activeProfile.device_code,
+      board: activeProfile.board,
+      soc_model: activeProfile.soc_model,
+      chipset: activeProfile.chipset,
+      android_id: activeProfile.android_id,
+      os_release: activeProfile.os_release,
+      os_sdk_int: activeProfile.os_sdk_int,
+      build_id: activeProfile.build_id,
+      resolution: activeProfile.resolution,
+      density_dpi: activeProfile.density_dpi,
+      user_agent: activeProfile.user_agent,
+      app_version: activeProfile.app_version,
+      app_version_code: activeProfile.app_version_code
     };
 
     // 2. Parse session input into standardized MobileSession & DeviceTwinSession

@@ -734,6 +734,125 @@
 
 ---
 
+### 1.29 Authentic Web Comment Creation Mutation (`PolarisPostCommentInputRevampedMutation`)
+- **Official Meta Graph API v21.0 Mapping:** `POST /v21.0/{media-id}/comments`
+- **Live Endpoint:** `POST https://www.instagram.com/api/graphql`
+- **HTTP Method:** `POST`
+- **Ground-Truth Source:** Authentic Web REA Trace `scratch/rea_web_comment_trace.json` (Transaction 36, verified live execution on post `DepbV3TDaXD`). Live visual proof: `scratch/after_post_screenshot.png`.
+- **Query Friendly Name:** `PolarisPostCommentInputRevampedMutation`
+- **Query Doc ID:** `27261905640092552`
+- **Required Headers:**
+  * `User-Agent`: Chrome 130 Linux desktop (`Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36...`)
+  * `X-IG-App-ID`: `936619743392459`
+  * `X-FB-Friendly-Name`: `PolarisPostCommentInputRevampedMutation`
+  * `X-ASBD-ID`: `359341`
+  * `X-CSRFToken`: `<csrftoken>`
+  * `Content-Type`: `application/x-www-form-urlencoded`
+  * `Cookie`: `sessionid`, `ds_user_id`, `csrftoken`, `mid`, `ig_did`, `datr`
+- **Required Body Parameters:**
+  * `av`: FBID v2 (`17841419713919386`)
+  * `__d`: `www`
+  * `__user`: `0`
+  * `__a`: `1`
+  * `fb_dtsg`: Client anti-CSRF token
+  * `lsd`: Ephemeral security token
+  * `fb_api_caller_class`: `RelayModern`
+  * `fb_api_req_friendly_name`: `PolarisPostCommentInputRevampedMutation`
+  * `server_timestamps`: `true`
+  * `doc_id`: `27261905640092552`
+  * `variables`: `{"connections":["client:root:__PolarisPostComments__xdt_api__v1__media__media_id__comments__connection_connection(data:{},media_id:\"{media_id}\",sort_order:\"popular\")"],"data":{"comment_text":"{text}","media_id":"{media_id}"}}`
+- **Response Schema & Sample Output:**
+  ```json
+  {
+    "data": {
+      "xig_comment_create": {
+        "__typename": "XIGCommentCreateMutationSuccessResponse",
+        "comment_dict": {
+          "created_at": 1792431295,
+          "pk": "18113601751866379",
+          "text": "تست هوشمند توئین‌گراف - تاییدیه عمیق REA",
+          "user": {
+            "pk": "19835089130",
+            "full_name": "hokarveria",
+            "username": "hokar368",
+            "is_verified": false,
+            "fbid_v2": "17841419713919386",
+            "id": "19835089130"
+          }
+        }
+      }
+    },
+    "extensions": {
+      "server_metadata": {
+        "request_start_time_ms": 1792431295093,
+        "time_at_flush_ms": 1792431296047
+      },
+      "is_final": true
+    }
+  }
+  ```
+- **SDK Methods:** `webTwin.postComment(mediaId, message, options)`
+- **Live Output Citation:** HTTP 200 OK, Generated Comment PK: `18113601751866379`
+- **Safe Rate-Limit Guidance:** 1 comment per 20.0s - 45.0s (jittered). Max 15 comments/hour per account.
+- **Status:** ✅ VERIFIED & RESOLVED
+
+---
+
+### 1.30 Authentic Web Direct Message Send Mutation (`IGDirectTextSendMutation`)
+- **Official Meta Graph API v21.0 Mapping:** `POST /v21.0/{conversation-id}/messages`
+- **Live Endpoint:** `POST https://www.instagram.com/api/graphql`
+- **HTTP Method:** `POST`
+- **Ground-Truth Source:** Authentic Web REA Trace `scratch/rea_web_direct_trace.json` (Transaction 61, verified live execution on thread `2102378287099186` with `@tawanatallks`). Live visual proof: `scratch/direct_after_send_screenshot.png`.
+- **Query Friendly Name:** `IGDirectTextSendMutation`
+- **Query Doc ID:** `26911679871773184`
+- **Required Headers:**
+  * `User-Agent`: Chrome 130 Linux desktop (`Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36...`)
+  * `X-IG-App-ID`: `936619743392459`
+  * `X-FB-Friendly-Name`: `IGDirectTextSendMutation`
+  * `X-ASBD-ID`: `359341`
+  * `X-CSRFToken`: `<csrftoken>`
+  * `Content-Type`: `application/x-www-form-urlencoded`
+  * `Cookie`: `sessionid`, `ds_user_id`, `csrftoken`, `mid`, `ig_did`, `datr`
+- **Required Body Parameters:**
+  * `av`: FBID v2 (`17841419713919386`)
+  * `__d`: `www`
+  * `__user`: `0`
+  * `__a`: `1`
+  * `fb_dtsg`: Client anti-CSRF token
+  * `lsd`: Ephemeral security token
+  * `fb_api_caller_class`: `RelayModern`
+  * `fb_api_req_friendly_name`: `IGDirectTextSendMutation`
+  * `server_timestamps`: `true`
+  * `doc_id`: `26911679871773184`
+  * `variables`: `{"ig_thread_igid":"{thread_id}","offline_threading_id":"{offline_id}","recipient_igids":null,"text":{"sensitive_string_value":"{message}"},"send_attribution":"igd_web_chat_tab:in_thread"}`
+- **Response Schema & Sample Output:**
+  ```json
+  {
+    "data": {
+      "xig_direct_text_send_with_slide_messaging_response": {
+        "message_id": "mid.$cAH8NBXdym8ynhrZxnRjgAf2pgjQl",
+        "timestamp_ms": "1792434299410",
+        "id": "mid.$cAH8NBXdym8ynhrZxnRjgAf2pgjQl"
+      }
+    },
+    "extensions": {
+      "server_metadata": {
+        "request_start_time_ms": 1792434299060,
+        "time_at_flush_ms": 1792434299543
+      },
+      "is_final": true
+    }
+  }
+  ```
+- **SDK Methods:** `webTwin.sendDirectMessage(threadFbid, text)`, `tg.sendDirectMessage(threadFbid, text)`
+- **Live Output Citation:** HTTP 200 OK.
+  * REA Browser Trace: Message `mid.$cAH8NBXdym8ynhq4qEmhVWjdrpm3r`
+  * Pure SDK (Zero-Browser): Message `mid.$cAH8NBXdym8ynhrZxnRjgAf2pgjQl`
+- **Safe Rate-Limit Guidance:** 1 message per 15.0s - 30.0s (jittered). Max 20 messages/hour per account.
+- **Status:** ✅ VERIFIED & RESOLVED
+
+---
+
 ## 2. Complete Pando GraphQL Telemetry Catalog (27 Queries)
 
 All 27 queries captured in `evidence/raw_telemetry/instagram/captured_endpoints_catalog.json` and verified in `instagram_live_stream.log` and `instagram_session_2_deep_stream.log` (Xiaomi Redmi Note 13 4G):
@@ -786,6 +905,6 @@ In accordance with Section 3 of `AGENTS.md`:
 
 $$\text{Coverage Score} = \left( \frac{\text{Verified Operations Backed 1:1 by Meta Source / Telemetry}}{\text{Total Implemented Operations}} \right) \times 100\%$$
 
-- **Total Operations Reconciled & Documented:** 55
-- **Operations Backed 1:1 by Meta Source / Telemetry:** 55
+- **Total Operations Reconciled & Documented:** 57
+- **Operations Backed 1:1 by Meta Source / Telemetry:** 57
 - **Current Ground Truth Backing Score:** **100.0%** ✅

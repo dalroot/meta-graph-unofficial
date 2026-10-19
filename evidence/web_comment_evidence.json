@@ -1,0 +1,52 @@
+{
+  "platform": "instagram_web",
+  "evidence_type": "rea_live_web_comment_mutation",
+  "verified_at": "2026-10-19T17:35:04.946Z",
+  "account": "@hokar368",
+  "target_post": {
+    "shortcode": "DepbV3TDaXD",
+    "url": "https://www.instagram.com/p/DepbV3TDaXD/"
+  },
+  "comment_mutation": {
+    "url": "https://graph.instagram.com/logging_client_events",
+    "method": "POST",
+    "request_headers": {
+      "sec-ch-ua-platform": "\"Linux\"",
+      "x-web-session-id": "7nrfif:2l9i4e:2jebq6",
+      "referer": "https://www.instagram.com/",
+      "accept-language": "en-US",
+      "sec-ch-ua": "\"Not=A?Brand\";v=\"99\", \"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\"",
+      "x-ig-max-touch-points": "0",
+      "sec-ch-ua-mobile": "?0",
+      "x-asbd-id": "359341",
+      "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "accept": "*/*",
+      "content-type": "application/x-www-form-urlencoded"
+    },
+    "request_body": "access_token=936619743392459%7C3cdb3f896252a1db29679cb4554db266&message=%7B%22app_id%22%3A%22936619743392459%22%2C%22app_uid%22%3A%2219835089130%22%2C%22app_ver%22%3A%221.0.0%22%2C%22claims%22%3A%5B%22hmac.AR3misLea322tP8BAUDzZ4HL6-KwOlGRWnSM-exzEB6h56tN%22%5D%2C%22data%22%3A%5B%7B%22extra%22%3A%7B%22ig_userid%22%3A%2219835089130%22%2C%22pk%22%3A%2219835089130%22%2C%22rollout_hash%22%3A%221050818501%22%2C%22original_referrer%22%3Anull%2C%22original_referrer_domain%22%3A%22%22%2C%22referrer%22%3Anull%2C%22referrer_domain%22%3A%22%22%2C%22referrer_url%22%3A%22%22%2C%22url%22%3A%22%2Fp%2FDepbV3TDaXD%2F%22%2C%22nav_chain%22%3A%22PolarisDesktopPostRoot%3ApostPage%3A1%3Avia_cold_start%22%2C%22app_id%22%3A%22936619743392459%22%2C%22frontend_env%22%3A%22C3%22%2C%22a_pk%22%3A%2219835089130%22%2C%22container_module%22%3A%22postPage%22%2C%22device_model%22%3A%22Chrome+130.0.0.0%22%2C%22device_os%22%3A%22Web%22%2C%22deviceid%22%3A%225938349E-55B2-4633-9AEB-A04CFED59CC1%22%2C%22m_pk%22%3A%224010857192890410435%22%2C%22primary_locale%22%3A%22en_US%22%7D%2C%22name%22%3A%22instagram_organic_comment_button%22%2C%22time%22%3A1792431294.782%7D%2C%7B%22extra%22%3A%7B%22locale%22%3A%22en-US%22%7D%2C%22name%22%3A%22device_status%22%2C%22time%22%3A1792431295.329%7D%2C%7B%22extra%22%3A%7B%22density%22%3Anull%2C%22locale%22%3A%22en-US%22%2C%22platform%22%3A%22Linux+x86_64%22%2C%22screen_height%22%3A720%2C%22screen_width%22%3A1280%2C%22user_agent%22%3A%22Mozilla%2F5.0+(X11%3B+Linux+x86_64)+AppleWebKit%2F537.36+(KHTML%2C+like+Gecko)+Chrome%2F130.0.0.0+Safari%2F537.36%22%7D%2C%22name%22%3A%22device_id%22%2C%22time%22%3A1792431295.329%7D%5D%2C%22device_id%22%3A%225938349E-55B2-4633-9AEB-A04CFED59CC1%22%2C%22log_type%22%3A%22client_event%22%2C%22seq%22%3A0%2C%22session_id%22%3A%227nrfif%3A2l9i4e%3A2jebq6%22%7D",
+    "response_status": 200,
+    "response_headers": {
+      "x-stack": "www",
+      "x-fb-trace-id": "H725fuV2LdR",
+      "facebook-api-version": "v21.0",
+      "x-content-type-options": "nosniff",
+      "expires": "Sat, 01 Jan 2000 00:00:00 GMT",
+      "alt-svc": "h3=\":443\"; ma=86400",
+      "date": "Mon, 19 Oct 2026 17:34:57 GMT",
+      "content-type": "application/json; charset=UTF-8",
+      "vary": "Origin",
+      "x-fb-debug": "CBE0CJAIrtDGtKlK9OnLMn8l9nx7R/QFxmM8KZThazJWVg0FeKo2gFv718is1ZEm6IleykjXnByfFQmgJcggPw==",
+      "strict-transport-security": "max-age=31536000; preload; includeSubDomains",
+      "x-fb-rev": "1050818501",
+      "cache-control": "private, no-cache, no-store, must-revalidate",
+      "x-fb-connection-quality": "EXCELLENT; q=0.9, rtt=10, rtx=0, c=20, mss=1380, tbw=5219, tp=-1, tpl=-1, uplat=104, ullat=0",
+      "pragma": "no-cache",
+      "cross-origin-resource-policy": "cross-origin",
+      "x-fb-request-id": "A8SvB0AynCW5j3nC5GDHKsv",
+      "access-control-allow-origin": "*",
+      "content-length": "137"
+    },
+    "response_body": "{\n   \"checksum\": \"\",\n   \"config\": \"\",\n   \"config_owner_id\": \"\",\n   \"app_data\": \"{}\",\n   \"qpl_version\": \"\",\n   \"client_debug_config\": \"\"\n}",
+    "timestamp": "2026-10-19T17:34:57.356Z"
+  }
+}
