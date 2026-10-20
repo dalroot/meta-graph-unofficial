@@ -120,19 +120,32 @@ The development of this project strictly adheres to the following principles def
 
 ---
 
-## Currently Verified Capabilities
+## Currently Verified Capabilities (30 Fully Verified Operations)
 
-The following capabilities have been tested and empirically verified against live Meta web endpoints:
+TwinGraph maintains a comprehensive ledger of 30 production-verified capabilities backed by **100% REA empirical evidence** and modeled 1:1 on **Meta Graph API v21.0**:
 
-| Domain | Action | Method | Target Endpoint | Status |
-| :--- | :--- | :---: | :--- | :---: |
-| **Instagram** | Get Media Comments | `GET` | `/api/v1/media/{media_id}/comments/` | Verified Live |
-| **Instagram** | Get Notifications & Mentions | `GET` | `/api/v1/news/inbox/?mark_as_read=false` | Verified Live |
-| **Instagram** | Upload Photo | `POST` | `/rupload_igphoto/{upload_id}` | Verified Live |
-| **Instagram** | Configure Feed Post | `POST` | `/api/v1/media/configure/` | Verified Live |
-| **Instagram** | Configure Story Post | `POST` | `/api/v1/media/configure_to_story/` | Verified Live |
-| **Instagram** | Fetch User Profile | `GET` | `https://www.instagram.com/{username}/` | Verified Live |
-| **Facebook** | Publish Timeline Post | `POST` | `https://www.facebook.com/api/graphql/` | Verified Live |
+| Domain | Action / Method | Official Meta Graph v21.0 Path | Internal Protocol | Live Status |
+| :--- | :--- | :--- | :--- | :---: |
+| **Direct Inbox** | Fetch Conversation Messages | `GET /v21.0/{conversation-id}/messages` | `IGDThreadDetailQuery` (Doc ID: 29613940454875963) | ✅ **HTTP 200** |
+| **Direct Messages** | Send Direct Message (Zero-Browser) | `POST /v21.0/{conversation-id}/messages` | `IGDirectTextSendMutation` (Doc ID: 26911679871773184) | ✅ **HTTP 200** |
+| **Media & Reels** | Get Complete Media Metadata | `GET /v21.0/{media-id}` | RelayModern `/p/{shortcode}/` & `/reel/{shortcode}/` | ✅ **HTTP 200** |
+| **User Profile** | Public User Profile & Bio | `GET /v21.0/{user-id}?fields=...` | Standard Clean Web Profile Extraction | ✅ **HTTP 200** |
+| **Media Insights** | Media Metrics & Engagement | `GET /v21.0/{media-id}/insights` | Mobile Telemetry `GET /api/v1/insights/media_insights/` | ✅ **HTTP 200** |
+| **Account Overview** | 30-Day Growth & Reach | `GET /v21.0/{user-id}/insights` | Mobile Telemetry `GET /api/v1/insights/account_overview/` | ✅ **HTTP 200** |
+| **Feed Publishing** | Publish Feed Photo | `POST /v21.0/{ig-user-id}/media_publish` | Liger `rupload_igphoto` + Media Configuration | ✅ **HTTP 200** |
+| **Story Publishing** | Publish 24h Story | `POST /v21.0/{ig-user-id}/media` | Liger Story Upload + Story Configure | ✅ **HTTP 200** |
+| **Reels Publishing** | Publish Video / Reel | `POST /v21.0/{ig-user-id}/media?media_type=REELS` | Resumable Video Upload + Clips Configure | ✅ **HTTP 200** |
+| **Comment Streaming** | Extract Comments & Replies | `GET /v21.0/{media-id}/comments` | `GET /api/v1/media/{id}/comments/` | ✅ **HTTP 200** |
+| **Story Tray** | Active Stories Tray & Expiration | `GET /v21.0/{ig-user-id}/stories` | `GET /api/v1/feed/reels_tray/` | ✅ **HTTP 200** |
+| **Tags & Notifications**| Mentions & Tagged Feed | `GET /v21.0/{ig-user-id}/tags` | `GET /api/v1/news/inbox/` | ✅ **HTTP 200** |
+| **Facebook Timeline** | Publish Facebook Page Post | `POST /v21.0/{page-id}/feed` | `ComposerStoryCreateMutation` | ✅ **HTTP 200** |
+| **Hardware Attestation**| Redmi Note 13 Hardware Emulation| Hardware Codec & Attestation Profile | Qualcomm Snapdragon SM6225 + HMAC Signatures | ✅ **HTTP 200** |
+| **Search Engine** | Search & Discovery (`topsearch_flat`) | `GET /v21.0/users/search` | `GET /api/v1/fbsearch/topsearch_flat/` | ✅ **HTTP 200** |
+| **Viral Content** | Viral Reels Hunter (Global Explore) | `GET /v21.0/ig_hashtag_search` | Guest Mode Zero-Auth Extraction (11M+ views) | ✅ **HTTP 200** |
+| **Home Timeline** | Authenticated Home Feed | `GET /v21.0/me/feed` | Relay Client Root | ✅ **HTTP 200** |
+| **Direct Media Downloader**| Video/Audio CDN Downloader | Direct CDN Stream | Native Chunked Downloader + FFmpeg Extraction | ✅ **HTTP 200** |
+| **Comment Posting** | Post Comment (Zero-Browser) | `POST /v21.0/{media-id}/comments` | `PolarisPostCommentInputRevampedMutation` | ✅ **HTTP 200** |
+| *+ 11 More Capabilities* | Grid Hydration, Following, Monetization, etc. | See full matrix in `docs/VERIFIED_CAPABILITIES_AND_ROADMAP.md` | Pando GraphQL & Tigon Engine Traces | ✅ **HTTP 200** |
 
 ---
 
@@ -141,7 +154,8 @@ The following capabilities have been tested and empirically verified against liv
 TwinGraph decouples hardware and OS tester profiles from core logic, supporting both mobile hardware and desktop web browser fingerprints:
 
 - **Primary Web Twin (`chrome_windows_x64`):** Google Chrome 130 on Windows 11 x64 with full High-Entropy Client Hints (`platformVersion: 15.0.0`), 1920x1080 viewport, and NVIDIA Direct3D11 signature.
-- **Legacy / Diagnostic Web Twin (`chrome_linux_x64`):** Google Chrome on Linux x86_64, preserved for diagnostic comparisons and testing.
+- **Hardware Mobile Twin (`redmi_note_13`):** Xiaomi Redmi Note 13 4G (Snapdragon 680/685 SM6225, Android 15 HyperOS 2.0) with Tigon/Liger mobile protocol.
+- **Diagnostic Web Twin (`chrome_linux_x64`):** Google Chrome on Linux x86_64, preserved for diagnostic comparisons and testing.
 
 > ⚠️ **Security Warning regarding Linux Web Twin:**  
 > Meta's anti-bot detection algorithms treat desktop Linux web clients with heightened scrutiny (Tier 3 Risk), as consumer Instagram web usage from Linux is statistically rare and heavily correlated with datacenter scraping and automated bots.  
@@ -156,6 +170,34 @@ console.log(TwinProfileRegistry.listAll());
 // Default Web Twin is automatically Windows 11 x64
 const defaultWeb = TwinProfileRegistry.getDefaultWeb();
 console.log(defaultWeb.name); // Google Chrome on Windows 11 x64
+```
+
+---
+
+## Smart Rate Limiting & Account Safety Shield
+
+TwinGraph features an intelligent traffic pacer that safeguards user accounts from Meta checkpoints and automated bans:
+
+- **Guest Mode Pacing:** High-throughput, relaxed Token Bucket (40 requests burst) with natural micro-jitter (40-120ms) for public resources (media, reels, hashtags).
+- **Protected Account Pacing:** Applies Gaussian pseudo-random delays via the Box-Muller transform ($1800\text{ms} \pm 400\text{ms}$) to simulate human interaction.
+- **Account Safety Shield:** Enforces a configurable safe threshold (default: 100 calls/hour) for authenticated sessions.
+- **Transparent Meta 429 Errors:** When rate limited, TwinGraph returns official Meta Graph API v21.0 error shapes with clear reasons (`account_hourly_safety_cap`, `burst_limit_exceeded`), human-readable titles, and accurate `Retry-After` headers.
+
+```json
+{
+  "error": {
+    "message": "(#17) Account Safety Shield Active: Safe hourly threshold (100 calls/hr) reached for live session. Pausing for 60s to protect account from Meta checkpoint/ban.",
+    "type": "OAuthException",
+    "code": 17,
+    "error_subcode": 2446079,
+    "is_transient": true,
+    "error_user_title": "Account Safety Shield Active",
+    "error_user_msg": "Safe hourly request threshold reached on live account session. Throttling temporarily to prevent detection.",
+    "retry_after_seconds": 60,
+    "rate_limit_reason": "account_hourly_safety_cap",
+    "fbtrace_id": "twin_3c8a91f04b28d01a"
+  }
+}
 ```
 
 ---
@@ -184,6 +226,7 @@ Or install from source:
 git clone https://github.com/dalroot/meta-graph-unofficial.git
 cd meta-graph-unofficial
 npm install
+npm run build
 ```
 
 ---
@@ -239,13 +282,17 @@ const mediaComments = await tg.get('/v21.0/Db-mzoXM6ik/comments', { fields: 'id,
 Run Meta Graph API v21.0 as a standalone local server accessible by **any programming language** (Python, PHP, Go, cURL):
 
 ```bash
-# 1. Issue an API Key (Master for unlimited, or Free with quota)
-npx tsx scripts/key_cli.ts create --name "MyClient" --role master
+# 1. Issue an API Key using key_cli.ts (Master for unlimited, or Free with quota)
+npx tsx scripts/key_cli.ts generate --owner "MyAdmin" --role master
+npx tsx scripts/key_cli.ts generate --owner "Tester" --role free --limit 50
 
-# 2. Start the local Wire Gateway Server (port 3000)
-npx tsx scripts/start_gateway.ts --port 3000
+# 2. List or inspect existing keys in SQLite vault
+npx tsx scripts/key_cli.ts list
 
-# 3. Call with standard cURL, Python requests, or Postman:
+# 3. Start the local Wire Gateway Server (port 3000)
+node --experimental-strip-types scripts/start_gateway.ts --port 3000
+
+# 4. Call with standard cURL, Python requests, or Postman:
 curl "http://localhost:3000/v21.0/me?access_token=YOUR_API_KEY"
 curl "http://localhost:3000/v21.0/me?fields=id,username" -H "Authorization: Bearer YOUR_API_KEY"
 ```
