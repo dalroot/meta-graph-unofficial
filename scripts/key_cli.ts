@@ -10,7 +10,7 @@
  *   npx tsx scripts/key_cli.ts validate <token>
  */
 
-import { ApiKeyManager, KeyRole } from '../ts_src/auth/api_key_manager.js';
+import { ApiKeyManager, type KeyRole } from '../dist/auth/api_key_manager.js';
 
 function parseArgs(args: string[]): Record<string, string> {
   const result: Record<string, string> = {};

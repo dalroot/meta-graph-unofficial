@@ -6,16 +6,18 @@
 import { TesterProfile, MobileDeviceProfile, WebBrowserProfile, TwinPlatform } from './types.js';
 import { REDMI_NOTE_13_PROFILE } from './mobile/redmi_note_13.js';
 import { CHROME_LINUX_PROFILE } from './web/chrome_linux.js';
+import { CHROME_WINDOWS_PROFILE } from './web/chrome_windows.js';
 
 export class TwinProfileRegistry {
   private static profiles: Map<string, TesterProfile> = new Map();
   private static defaultMobileId: string = REDMI_NOTE_13_PROFILE.id;
-  private static defaultWebId: string = CHROME_LINUX_PROFILE.id;
+  private static defaultWebId: string = CHROME_WINDOWS_PROFILE.id;
 
   static {
     // Register initial ground-truth profiles
     this.register(REDMI_NOTE_13_PROFILE);
     this.register(CHROME_LINUX_PROFILE);
+    this.register(CHROME_WINDOWS_PROFILE);
   }
 
   public static register(profile: TesterProfile): void {

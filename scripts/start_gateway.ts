@@ -6,9 +6,9 @@
  *   npx tsx scripts/start_gateway.ts [--port 3000] [--host 127.0.0.1]
  */
 
-import { TwinGraph } from '../ts_src/twin_graph.js';
-import { ApiKeyManager } from '../ts_src/auth/api_key_manager.js';
-import { TwinGatewayServer } from '../ts_src/gateway/gateway_server.js';
+import { TwinGraph } from '../dist/twin_graph.js';
+import { ApiKeyManager } from '../dist/auth/api_key_manager.js';
+import { TwinGatewayServer } from '../dist/gateway/gateway_server.js';
 
 function parsePort(): number {
   const portArgIdx = process.argv.indexOf('--port');

@@ -11,12 +11,14 @@ import * as url from 'node:url';
 import * as crypto from 'node:crypto';
 import { GraphRouter } from '../router/graph_router.js';
 import { ApiKeyManager, KeyValidationResult } from '../auth/api_key_manager.js';
+import { SmartRateLimiter } from './rate_limiter.js';
 
 export interface GatewayServerOptions {
   port?: number;
   host?: string;
   router: GraphRouter;
   keyManager?: ApiKeyManager;
+  rateLimiter?: SmartRateLimiter;
   allowGuestForPublicMedia?: boolean;
 }
 
@@ -26,6 +28,7 @@ export class TwinGatewayServer {
   private host: string;
   private router: GraphRouter;
   private keyManager: ApiKeyManager;
+  private rateLimiter: SmartRateLimiter;
   private allowGuestForPublicMedia: boolean;
 
   constructor(options: GatewayServerOptions) {
@@ -33,6 +36,7 @@ export class TwinGatewayServer {
     this.host = options.host || '127.0.0.1';
     this.router = options.router;
     this.keyManager = options.keyManager || new ApiKeyManager();
+    this.rateLimiter = options.rateLimiter || new SmartRateLimiter();
     this.allowGuestForPublicMedia = options.allowGuestForPublicMedia ?? false;
   }
 
@@ -168,6 +172,37 @@ export class TwinGatewayServer {
     }
     if (authResult.remainingToday !== undefined) {
       res.setHeader('X-TwinGraph-Remaining-Today', authResult.remainingToday.toString());
+    }
+
+    // 3.5. Evaluate Smart Rate Limiter (Gentle Guest vs Protected Account Pacing)
+    const pacer = this.rateLimiter.check(req.method || 'GET', pathname);
+    res.setHeader('X-TwinGraph-Mode', pacer.mode);
+    res.setHeader('X-App-Usage', JSON.stringify(pacer.appUsage));
+
+    if (!pacer.allowed) {
+      res.setHeader('Retry-After', (pacer.retryAfterSec || 2).toString());
+      res.writeHead(429);
+      res.end(JSON.stringify({
+        error: {
+          message: pacer.errorMessage || '(#17) User request limit reached for this resource.',
+          type: 'OAuthException',
+          code: 17,
+          error_subcode: 2446079,
+          is_transient: true,
+          error_user_title: pacer.reason === 'account_hourly_safety_cap' ? 'Account Safety Shield Active' : 'Rate Limit Pacing Active',
+          error_user_msg: pacer.reason === 'account_hourly_safety_cap'
+            ? 'Safe hourly request threshold reached on live account session. Throttling temporarily to prevent detection.'
+            : 'Requests are paced with human jitter to protect account integrity. Please retry shortly.',
+          retry_after_seconds: pacer.retryAfterSec || 2,
+          rate_limit_reason: pacer.reason || 'rate_limit_exceeded',
+          fbtrace_id: `twin_${crypto.randomBytes(8).toString('hex')}`
+        }
+      }, null, 2));
+      return;
+    }
+
+    if (pacer.delayMs > 0) {
+      await new Promise(r => setTimeout(r, pacer.delayMs));
     }
 
     // 4. Collect Query Parameters & Body

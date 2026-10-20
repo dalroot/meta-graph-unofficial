@@ -20,3 +20,4 @@ circuit_breaker.json
 metatwin-downloader-bot/
 data/
 *.db
+.chrome_windows_profile/

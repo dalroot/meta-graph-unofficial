@@ -742,7 +742,7 @@
 - **Query Friendly Name:** `PolarisPostCommentInputRevampedMutation`
 - **Query Doc ID:** `27261905640092552`
 - **Required Headers:**
-  * `User-Agent`: Chrome 130 Linux desktop (`Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36...`)
+  * `User-Agent`: Chrome 130 Windows 11 desktop (`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36...`) [Primary] / Chrome 130 Linux [Legacy]
   * `X-IG-App-ID`: `936619743392459`
   * `X-FB-Friendly-Name`: `PolarisPostCommentInputRevampedMutation`
   * `X-ASBD-ID`: `359341`
@@ -806,7 +806,7 @@
 - **Query Friendly Name:** `IGDirectTextSendMutation`
 - **Query Doc ID:** `26911679871773184`
 - **Required Headers:**
-  * `User-Agent`: Chrome 130 Linux desktop (`Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36...`)
+  * `User-Agent`: Chrome 130 Windows 11 desktop (`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36...`) [Primary] / Chrome 130 Linux [Legacy]
   * `X-IG-App-ID`: `936619743392459`
   * `X-FB-Friendly-Name`: `IGDirectTextSendMutation`
   * `X-ASBD-ID`: `359341`

@@ -46,11 +46,19 @@ export interface WebBrowserProfile extends BaseTesterProfile {
   app_id: string;
   viewport_width: number;
   viewport_height: number;
+  screen_avail_width?: number;
+  screen_avail_height?: number;
   device_pixel_ratio: number;
   accept_language: string;
   sec_ch_ua?: string;
   sec_ch_ua_mobile?: string;
   sec_ch_ua_platform?: string;
+  sec_ch_ua_platform_version?: string;
+  sec_ch_ua_arch?: string;
+  sec_ch_ua_bitness?: string;
+  sec_ch_ua_model?: string;
+  webgl_vendor?: string;
+  webgl_renderer?: string;
 }
 
 export type TesterProfile = MobileDeviceProfile | WebBrowserProfile;

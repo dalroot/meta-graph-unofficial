@@ -112,6 +112,18 @@ export class WebTwin {
     if (this.profile.sec_ch_ua_platform) {
       headers['sec-ch-ua-platform'] = this.profile.sec_ch_ua_platform;
     }
+    if (this.profile.sec_ch_ua_platform_version) {
+      headers['sec-ch-ua-platform-version'] = this.profile.sec_ch_ua_platform_version;
+    }
+    if (this.profile.sec_ch_ua_arch) {
+      headers['sec-ch-ua-arch'] = this.profile.sec_ch_ua_arch;
+    }
+    if (this.profile.sec_ch_ua_bitness) {
+      headers['sec-ch-ua-bitness'] = this.profile.sec_ch_ua_bitness;
+    }
+    if (this.profile.sec_ch_ua_model) {
+      headers['sec-ch-ua-model'] = this.profile.sec_ch_ua_model;
+    }
 
     if (this.session.csrftoken) {
       headers['X-CSRFToken'] = this.session.csrftoken;

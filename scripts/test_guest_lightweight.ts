@@ -1,4 +1,4 @@
-import { UniversalDownloader } from '../ts_src/utils/downloader.js';
+import { UniversalDownloader } from '../dist/utils/downloader.js';
 
 async function testGuestLightweight() {
   console.log('===============================================================');

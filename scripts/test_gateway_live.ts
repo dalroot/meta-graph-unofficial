@@ -2,9 +2,9 @@
  * End-to-End Live Integration Test for TwinGatewayServer & API Key Auth
  */
 
-import { TwinGraph } from '../ts_src/twin_graph.js';
-import { ApiKeyManager } from '../ts_src/auth/api_key_manager.js';
-import { TwinGatewayServer } from '../ts_src/gateway/gateway_server.js';
+import { TwinGraph } from '../dist/twin_graph.js';
+import { ApiKeyManager } from '../dist/auth/api_key_manager.js';
+import { TwinGatewayServer } from '../dist/gateway/gateway_server.js';
 
 async function runGatewayTests() {
   console.log('===============================================================');

@@ -41,7 +41,7 @@ By evolving from a local SDK into a standalone **HTTP Wire-Compatible v21.0 Gate
 - **Zero Meta App Review:** Eliminates the need for business entity verification, Facebook Partner requirements, and app approval workflows.
 - **Unified Meta Ecosystem:** A single interface covering both Instagram and Facebook.
 - **Zero Guesswork Architecture:** No method is admitted to the codebase without an empirical network trace recorded under the REA framework.
-- **Dual Digital Twins:** Hardware-level Xiaomi Redmi Note 13 4G Mobile Twin + Clean Chrome Web Twin.
+- **Dual Digital Twins:** Hardware-level Xiaomi Redmi Note 13 4G Mobile Twin + Windows 11 Chrome Web Twin (with legacy Linux twin preserved for diagnostics).
 - **Multi-OS Fingerprint Emulation:** Out-of-the-box support for Linux x86_64, Windows 11, and Android HyperOS.
 - **Dual-Engine Architecture:** High-speed native Node.js interface paired with an optional Go core engine for high-throughput packet processing.
 - **Enterprise-Ready Modules:** Direct message sending, comment streaming, Feed/Story uploads, media insights, and dynamic `?fields=` projection.
@@ -138,26 +138,24 @@ The following capabilities have been tested and empirically verified against liv
 
 ## Dynamic Operating System & Digital Twin Profiles
 
-The library decouples OS profiles from the core logic, allowing applications to mimic any desktop platform or register new browser profiles dynamically:
+TwinGraph decouples hardware and OS tester profiles from core logic, supporting both mobile hardware and desktop web browser fingerprints:
 
-```javascript
-import MetaGraph from 'meta-graph-unofficial';
-import { ProfileManager } from 'meta-graph-unofficial/profiles';
+- **Primary Web Twin (`chrome_windows_x64`):** Google Chrome 130 on Windows 11 x64 with full High-Entropy Client Hints (`platformVersion: 15.0.0`), 1920x1080 viewport, and NVIDIA Direct3D11 signature.
+- **Legacy / Diagnostic Web Twin (`chrome_linux_x64`):** Google Chrome on Linux x86_64, preserved for diagnostic comparisons and testing.
 
-// List built-in profiles: ['linux_x86_64_chrome', 'windows_11_chrome', 'macos_sonoma_safari']
-const manager = new ProfileManager();
-console.log(manager.listProfiles());
+> ⚠️ **Security Warning regarding Linux Web Twin:**  
+> Meta's anti-bot detection algorithms treat desktop Linux web clients with heightened scrutiny (Tier 3 Risk), as consumer Instagram web usage from Linux is statistically rare and heavily correlated with datacenter scraping and automated bots.  
+> **Recommendation:** Always use the default `CHROME_WINDOWS_PROFILE` for production gateway and authenticated operations. `CHROME_LINUX_PROFILE` is preserved strictly for diagnostic testing and must not be deleted.
 
-// Initialize client with Windows 11 Chrome profile
-const mg = new MetaGraph({ osProfile: 'windows_11_chrome' });
+```typescript
+import { TwinGraph, TwinProfileRegistry, CHROME_WINDOWS_PROFILE, CHROME_LINUX_PROFILE } from 'meta-graph-unofficial';
 
-// Or register a custom environment (e.g. Chrome on Ubuntu 24.04 ARM64)
-manager.registerCustomProfile('ubuntu_arm64_chrome', {
-  name: 'Chrome on Ubuntu 24.04 ARM64',
-  user_agent: 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-  sec_ch_ua: '"Chromium";v="130", "Google Chrome";v="130"',
-  sec_ch_ua_platform: '"Linux"'
-});
+// List available profiles
+console.log(TwinProfileRegistry.listAll());
+
+// Default Web Twin is automatically Windows 11 x64
+const defaultWeb = TwinProfileRegistry.getDefaultWeb();
+console.log(defaultWeb.name); // Google Chrome on Windows 11 x64
 ```
 
 ---
