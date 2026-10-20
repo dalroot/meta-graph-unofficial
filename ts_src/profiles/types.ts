@@ -12,6 +12,29 @@ export interface BaseTesterProfile {
   description: string;
 }
 
+export interface MobileHardwareCodecs {
+  video_encoders: string[];
+  video_decoders: string[];
+  image_encoders: string[];
+  audio_encoders: string[];
+  audio_decoders: string[];
+}
+
+export interface MobileCpuCluster {
+  cores: number;
+  type: 'performance' | 'efficiency';
+  arch: string;
+  max_freq_khz: number;
+}
+
+export interface MobileGpuSpec {
+  renderer: string;
+  vendor: string;
+  version: string;
+  vulkan_supported: boolean;
+  vulkan_version?: string;
+}
+
 export interface MobileDeviceProfile extends BaseTesterProfile {
   platform: 'MOBILE';
   brand: string;
@@ -19,14 +42,26 @@ export interface MobileDeviceProfile extends BaseTesterProfile {
   model: string;
   device_code: string;
   board: string;
+  product?: string;
   soc_model: string;
   chipset: string;
+  abi?: string;
+  supported_abis?: string[];
+  cpu_clusters?: MobileCpuCluster[];
+  gpu?: MobileGpuSpec;
+  hardware_codecs?: MobileHardwareCodecs;
+  sensors?: string[];
   android_id: string;
   os_release: string;
   os_sdk_int: number;
   build_id: string;
+  hyperos_version?: string;
+  build_fingerprint?: string;
+  kernel_version?: string;
+  security_patch?: string;
   resolution: string;
   density_dpi: number;
+  refresh_rate_hz?: number;
   user_agent: string;
   app_version: string;
   app_version_code: number;
@@ -34,6 +69,7 @@ export interface MobileDeviceProfile extends BaseTesterProfile {
   http_engine: 'Liger' | 'Tigon';
   capabilities: string;
 }
+
 
 export interface WebBrowserProfile extends BaseTesterProfile {
   platform: 'WEB';
