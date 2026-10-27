@@ -221,13 +221,12 @@ go build -o bin/engine main.go
 npm install meta-graph-unofficial
 ```
 
-Or install from source:
+Or install from source (pre-compiled `dist/` included):
 
 ```bash
 git clone https://github.com/dalroot/meta-graph-unofficial.git
 cd meta-graph-unofficial
 npm install
-npm run build
 ```
 
 ---
@@ -316,13 +315,14 @@ MetaGraph Unofficial includes a production-ready **MCP Server** and accompanying
 | `ghost_explore_viral` | Monitor viral Explore posts ranked by controversy score and comment ratio. | `limit`, `minCommentRatio` |
 | `ghost_audit_account` | End-to-end automated analytical audit: total plays, average views, and engagement rate. | `username`, `sampleCount` |
 
-### 2. Installation & Build
+### 2. Zero-Build Installation (Pre-compiled & Ready to Run)
+
+The repository comes **pre-compiled** with production JavaScript in `dist/`. No TypeScript compiler or build step is required:
 
 ```bash
 git clone https://github.com/dalroot/meta-graph-unofficial.git
 cd meta-graph-unofficial
 npm install
-npm run build
 ```
 
 ### 3. Connect to AI Agents (Claude Desktop, Cursor, Antigravity)
