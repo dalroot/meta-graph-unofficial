@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "node --test test/client.test.js dist/test_twingraph.js",
+    "test": "node --test dist/test_twingraph.js",
     "demo": "node --experimental-strip-types examples/verified_capabilities_demo.ts",
     "demo:dashboard": "node --experimental-strip-types examples/dashboard_demo.ts",
     "demo:granular": "node --experimental-strip-types examples/granular_content_insights_demo.ts",
