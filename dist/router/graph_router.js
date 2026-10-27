@@ -79,11 +79,11 @@ export class GraphRouter {
             id: this.deps.device.getUserId(),
             username,
             name: this.deps.device.getFullName(),
-            biography: 'Creator Profile',
-            followers_count: 124,
-            follows_count: 89,
-            media_count: 14,
-            profile_picture_url: 'https://scontent.cdninstagram.com/avatar_placeholder.jpg',
+            biography: '',
+            followers_count: 0,
+            follows_count: 0,
+            media_count: 0,
+            profile_picture_url: '',
             is_professional_account: true
         };
         return this.projector.project('User', rawUser, params.fields, version);

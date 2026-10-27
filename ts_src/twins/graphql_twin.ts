@@ -397,12 +397,12 @@ export class GraphQLTwin {
       username: rawUser.username || this.deviceTwin.getUsername(),
       name: rawUser.full_name || rawUser.name || this.deviceTwin.getFullName(),
       biography: rawUser.biography || '',
-      followers_count: rawUser.followers_count ?? rawUser.follower_count ?? 124,
-      follows_count: rawUser.follows_count ?? rawUser.following_count ?? 89,
-      media_count: rawUser.media_count ?? 14,
-      profile_picture_url: rawUser.profile_pic_url || rawUser.profile_picture_url || 'https://scontent-ams2-1.cdninstagram.com/avatar_placeholder.jpg',
-      is_professional_account: rawUser.is_professional_account ?? true,
-      category_name: rawUser.category_name || 'Creator / Technology'
+      followers_count: rawUser.followers_count ?? rawUser.follower_count ?? 0,
+      follows_count: rawUser.follows_count ?? rawUser.following_count ?? 0,
+      media_count: rawUser.media_count ?? 0,
+      profile_picture_url: rawUser.profile_pic_url || rawUser.profile_picture_url || '',
+      is_professional_account: rawUser.is_professional_account ?? false,
+      category_name: rawUser.category_name || ''
     };
   }
 
@@ -411,18 +411,19 @@ export class GraphQLTwin {
    */
   public translateMediaToGraphNode(rawMedia: any): GraphMedia {
     const isVideo = rawMedia.media_type === 2 || rawMedia.media_type === 'VIDEO' || rawMedia.video_versions;
+    const code = rawMedia.code || rawMedia.shortcode || rawMedia.id || '';
     return {
-      id: String(rawMedia.id || rawMedia.pk || '3587123984712093481'),
-      ig_id: String(rawMedia.pk || rawMedia.id || '3587123984712093481'),
-      caption: typeof rawMedia.caption === 'string' ? rawMedia.caption : rawMedia.caption?.text || 'Verification media item',
+      id: String(rawMedia.id || rawMedia.pk || code),
+      ig_id: String(rawMedia.pk || rawMedia.id || code),
+      caption: typeof rawMedia.caption === 'string' ? rawMedia.caption : rawMedia.caption?.text || '',
       media_type: isVideo ? 'VIDEO' : 'IMAGE',
       media_product_type: rawMedia.product_type === 'clips' ? 'REELS' : 'FEED',
-      media_url: rawMedia.video_versions?.[0]?.url || rawMedia.image_versions2?.candidates?.[0]?.url || 'https://scontent.xx.fbcdn.net/v/sample_media.mp4',
-      permalink: `https://www.instagram.com/p/${rawMedia.code || rawMedia.shortcode || 'DedDBnTCs-J'}/`,
-      shortcode: rawMedia.code || rawMedia.shortcode || 'DedDBnTCs-J',
-      timestamp: rawMedia.taken_at ? new Date(rawMedia.taken_at * 1000).toISOString() : new Date().toISOString(),
-      like_count: rawMedia.like_count ?? 42,
-      comments_count: rawMedia.comment_count ?? 5
+      media_url: rawMedia.video_versions?.[0]?.url || rawMedia.image_versions2?.candidates?.[0]?.url || '',
+      permalink: code ? `https://www.instagram.com/p/${code}/` : '',
+      shortcode: code,
+      timestamp: rawMedia.taken_at ? new Date(rawMedia.taken_at > 1e11 ? rawMedia.taken_at : rawMedia.taken_at * 1000).toISOString() : new Date().toISOString(),
+      like_count: rawMedia.like_count ?? 0,
+      comments_count: rawMedia.comment_count ?? rawMedia.comments_count ?? 0
     };
   }
 

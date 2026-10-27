@@ -90,7 +90,7 @@ const GHOST_TOOLS: Tool[] = [
       properties: {
         mediaId: {
           type: 'string',
-          description: 'Instagram media shortcode (e.g. "DedDBnTCs-J") or numerical media ID'
+          description: 'Instagram media shortcode (e.g. "Deyg1mxiobv") or numerical media ID'
         }
       },
       required: ['mediaId']

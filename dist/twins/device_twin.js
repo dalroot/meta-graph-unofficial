@@ -132,6 +132,9 @@ export class DeviceTwin {
     getMobileSession() {
         return { ...this.mobileSession };
     }
+    getSessionCookie() {
+        return this.mobileSession.cookie_string || '';
+    }
     getTokens() {
         return { ...this.session.key_tokens };
     }

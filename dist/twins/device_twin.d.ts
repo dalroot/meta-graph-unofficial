@@ -42,6 +42,7 @@ export declare class DeviceTwin {
     getFingerprint(): DeviceFingerprint;
     getSession(): DeviceTwinSession;
     getMobileSession(): MobileSession;
+    getSessionCookie(): string;
     getTokens(): SessionTokens;
     getUserId(): string;
     getUsername(): string;

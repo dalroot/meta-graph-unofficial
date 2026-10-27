@@ -13,9 +13,13 @@ export interface TransportRequestOptions {
     headers?: Record<string, string>;
     body?: string;
     timeoutMs?: number;
+    proxyUrl?: string;
 }
 export declare class TwinTransport {
-    constructor();
+    private defaultProxy?;
+    constructor(options?: {
+        proxyUrl?: string;
+    });
     request(urlStr: string, options?: TransportRequestOptions): Promise<TransportResponse>;
     /**
      * Performs an HTTP request and returns raw binary Buffer

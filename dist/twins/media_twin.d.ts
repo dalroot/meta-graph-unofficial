@@ -34,6 +34,7 @@ export declare class MediaTwin {
      * Official Meta Graph API v21.0 Equivalent: GET /{media-id}
      */
     getMedia(mediaId: string): Promise<GraphMedia>;
+    private parseMetricCount;
     /**
      * Caption Parser & Validator (Instagram 2,200 character limit, hashtag & mention extractor)
      */

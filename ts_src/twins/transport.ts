@@ -6,6 +6,7 @@
 import * as https from 'node:https';
 import * as http from 'node:http';
 import * as zlib from 'node:zlib';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 
 export interface TransportResponse {
   status: number;
@@ -19,10 +20,15 @@ export interface TransportRequestOptions {
   headers?: Record<string, string>;
   body?: string;
   timeoutMs?: number;
+  proxyUrl?: string;
 }
 
 export class TwinTransport {
-  constructor() {}
+  private defaultProxy?: string;
+
+  constructor(options?: { proxyUrl?: string }) {
+    this.defaultProxy = options?.proxyUrl;
+  }
 
   public async request(
     urlStr: string,
@@ -31,6 +37,16 @@ export class TwinTransport {
     const url = new URL(urlStr);
     const method = (options.method || 'GET').toUpperCase();
     const timeout = options.timeoutMs || 25000;
+
+    const proxyEnv = options.proxyUrl || this.defaultProxy || process.env.HTTPS_PROXY || process.env.ALL_PROXY || process.env.http_proxy;
+    let agent: any = undefined;
+    if (proxyEnv && proxyEnv.startsWith('socks')) {
+      try {
+        agent = new SocksProxyAgent(proxyEnv);
+      } catch {
+        // Continue with direct connection
+      }
+    }
 
     const headers = { ...(options.headers || {}) };
     if (options.body && !headers['Content-Length'] && !headers['content-length']) {
@@ -45,7 +61,8 @@ export class TwinTransport {
           path: `${url.pathname}${url.search}`,
           method: method,
           headers: headers,
-          timeout: timeout
+          timeout: timeout,
+          agent: agent
         },
         (res) => {
           let stream: NodeJS.ReadableStream = res;

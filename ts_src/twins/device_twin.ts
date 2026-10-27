@@ -173,6 +173,10 @@ export class DeviceTwin {
     return { ...this.mobileSession };
   }
 
+  public getSessionCookie(): string {
+    return this.mobileSession.cookie_string || '';
+  }
+
   public getTokens(): SessionTokens {
     return { ...this.session.key_tokens };
   }

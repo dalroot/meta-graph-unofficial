@@ -76,17 +76,83 @@ export class MediaTwin {
      * Official Meta Graph API v21.0 Equivalent: GET /{media-id}
      */
     async getMedia(mediaId) {
-        return this.graphqlTwin.translateMediaToGraphNode({
-            id: mediaId,
-            pk: mediaId,
-            shortcode: 'DedDBnTCs-J',
-            code: 'DedDBnTCs-J',
-            caption: { text: 'Ground truth verification post' },
-            media_type: 2, // Video
-            product_type: 'clips',
-            like_count: 42,
-            comment_count: 5
-        });
+        const cleanId = mediaId.trim().replace(/^https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel)\/([a-zA-Z0-9_-]+).*/, '$1');
+        const url = `https://www.instagram.com/p/${cleanId}/`;
+        try {
+            const headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9,fa;q=0.8',
+                'X-IG-App-ID': '936619743392459',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none'
+            };
+            const cookie = this.deviceTwin.getSessionCookie();
+            if (cookie)
+                headers['Cookie'] = cookie;
+            const res = await this.transport.request(url, { method: 'GET', headers, timeoutMs: 20000 });
+            if (res.status === 200) {
+                const html = res.data;
+                let likes = 0;
+                let comments = 0;
+                let caption = '';
+                const descMatch = html.match(/<meta\s+(?:name="description"|property="og:description")\s+content="([^"]*)"/i);
+                if (descMatch) {
+                    const rawDesc = descMatch[1]
+                        .replace(/&#x([0-9a-fA-F]+);/g, (_, c) => String.fromCodePoint(parseInt(c, 16)))
+                        .replace(/&quot;/g, '"');
+                    const likesMatch = rawDesc.match(/([0-9,KMkm.]+)\s*likes/i);
+                    const commMatch = rawDesc.match(/([0-9,KMkm.]+)\s*comments/i);
+                    if (likesMatch)
+                        likes = this.parseMetricCount(likesMatch[1]);
+                    if (commMatch)
+                        comments = this.parseMetricCount(commMatch[1]);
+                    const captionMatch = rawDesc.match(/:\s*"([^"]*)"/);
+                    if (captionMatch)
+                        caption = captionMatch[1];
+                }
+                const ogTitleMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]*)"/i);
+                const title = ogTitleMatch ? ogTitleMatch[1] : caption;
+                return {
+                    id: cleanId,
+                    ig_id: cleanId,
+                    shortcode: cleanId,
+                    caption: caption || title || '',
+                    media_type: html.includes('og:type" content="video') ? 'VIDEO' : 'IMAGE',
+                    media_product_type: html.includes('/reel/') || html.includes('clips') ? 'REELS' : 'FEED',
+                    like_count: likes,
+                    comments_count: comments,
+                    permalink: `https://www.instagram.com/p/${cleanId}/`,
+                    timestamp: new Date().toISOString()
+                };
+            }
+        }
+        catch {
+            // In case of network timeout or offline
+        }
+        return {
+            id: cleanId,
+            ig_id: cleanId,
+            shortcode: cleanId,
+            caption: '',
+            media_type: 'VIDEO',
+            media_product_type: 'REELS',
+            like_count: 0,
+            comments_count: 0,
+            permalink: `https://www.instagram.com/p/${cleanId}/`,
+            timestamp: new Date().toISOString()
+        };
+    }
+    parseMetricCount(str) {
+        if (!str)
+            return 0;
+        const clean = str.replace(/,/g, '').trim();
+        if (clean.endsWith('K') || clean.endsWith('k'))
+            return Math.round(parseFloat(clean) * 1000);
+        if (clean.endsWith('M') || clean.endsWith('m'))
+            return Math.round(parseFloat(clean) * 1000000);
+        return parseInt(clean, 10) || 0;
     }
     /**
      * Caption Parser & Validator (Instagram 2,200 character limit, hashtag & mention extractor)
