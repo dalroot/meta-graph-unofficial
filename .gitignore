@@ -21,3 +21,4 @@ metatwin-downloader-bot/
 data/
 *.db
 .chrome_windows_profile/
+HANDOFF.md

@@ -56,6 +56,11 @@ graph TD
      * Ground-Truth Source (Official Doc / Raw Telemetry line reference)
      * Response Schema & Sample Output
      * Safe Rate-Limit Guidance
+7. **Strict Comment Velocity & Identical-String Ceilings (Incident Ground Truth 2026-10-22):**
+   - **Ground-Truth Source:** `evidence/INCIDENT_POSTMORTEM_SPAM_CHECKPOINT.md`
+   - Sending identical comment strings (e.g. `کەناڵ8`) is strictly capped at **maximum 10 comments per session**.
+   - Beyond 10 comments, multi-variant string rotation (emojis, whitespace, phrasing) is **mandatory** to prevent triggering Meta's automated Deduplication & Integrity classifier (error `1357031` checkpoint challenge).
+   - Minimum interval between comments MUST be jittered between **30.0s – 60.0s** for recurring automation. Fast bursts (<15s) are prohibited beyond 5 requests.
 
 ---
 

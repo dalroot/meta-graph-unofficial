@@ -20,6 +20,7 @@ Engineered with clean domain mixins, an optional Go transport engine, and strict
 - [High-Performance Go Transport Engine](#high-performance-go-transport-engine)
 - [Installation](#installation)
 - [Quick Start Guide](#quick-start-guide)
+- [Model Context Protocol (MCP) & Agent Skill](#model-context-protocol-mcp--agent-skill-ghost-mode)
 - [Session Extraction & Security](#session-extraction--security)
 - [Continuous Integration & Verification](#continuous-integration--verification)
 - [License](#license)
@@ -296,6 +297,64 @@ node --experimental-strip-types scripts/start_gateway.ts --port 3000
 curl "http://localhost:3000/v21.0/me?access_token=YOUR_API_KEY"
 curl "http://localhost:3000/v21.0/me?fields=id,username" -H "Authorization: Bearer YOUR_API_KEY"
 ```
+
+---
+
+## Model Context Protocol (MCP) & Agent Skill (Ghost Mode)
+
+MetaGraph Unofficial includes a production-ready **MCP Server** and accompanying **Agent Skill** (`instagram-ghost-analyst`) that enables any AI agent (Claude Desktop, Antigravity, Cursor, or custom LLM frameworks) to inspect, paginate, and audit any Instagram profile in **100% anonymous Ghost Mode** without browser automation, credentials, or footprint.
+
+### 1. Ready-to-Use Ghost Mode MCP Tools
+
+| MCP Tool Name | Description | Parameters |
+| :--- | :--- | :--- |
+| `ghost_get_profile` | Anonymously fetch profile bio, follower count, following count, total media, and HD avatar. | `username` |
+| `ghost_get_posts` | Deep timeline pagination of reels, carousels, and feed posts with play counts, likes, and comments. | `username`, `limit`, `cursor`, `feedType` |
+| `ghost_get_media_metrics` | Extract granular reel play counts (`video_play_count`), reach, and retention curves. | `mediaId` (shortcode or ID) |
+| `ghost_get_comments` | Harvest public comments with usernames, timestamps, and like counts. | `mediaId`, `limit` |
+| `ghost_search` | Search users and hashtags without leaving search history traces. | `query`, `type` |
+| `ghost_explore_viral` | Monitor viral Explore posts ranked by controversy score and comment ratio. | `limit`, `minCommentRatio` |
+| `ghost_audit_account` | End-to-end automated analytical audit: total plays, average views, and engagement rate. | `username`, `sampleCount` |
+
+### 2. Installation & Build
+
+```bash
+git clone https://github.com/dalroot/meta-graph-unofficial.git
+cd meta-graph-unofficial
+npm install
+npm run build
+```
+
+### 3. Connect to AI Agents (Claude Desktop, Cursor, Antigravity)
+
+Add the server to your agent's MCP settings configuration:
+
+```json
+{
+  "mcpServers": {
+    "instagram-ghost": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/meta-graph-unofficial/dist/mcp/server.js"]
+    }
+  }
+}
+```
+
+Or run directly from the command line:
+
+```bash
+npm run mcp
+```
+
+### 4. Natural Language Agent Prompts
+
+Once connected, simply prompt your agent:
+
+* *"Audit the Instagram page `@cristiano` in Ghost Mode: extract recent reels, their play counts, and compute the engagement rate."*
+* *"Fetch the top 30 posts from `@competitor_brand` using pagination and list their most viewed reels."*
+* *"Harvest the comments from reel `DedDBnTCs-J` and identify the main discussion topics."*
+
+The agent calls the typed MCP tools in the background, receiving clean JSON responses with zero browser overhead or detection risks.
 
 ---
 

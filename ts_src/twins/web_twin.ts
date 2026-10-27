@@ -212,16 +212,26 @@ export class WebTwin {
     if (res.status === 200) {
       let parsed: any;
       try {
-        parsed = JSON.parse(res.data);
+        const cleanData = res.data.replace(/^\s*for\s*\(\s*;\s*;\s*\)\s*;/, '');
+        parsed = JSON.parse(cleanData);
       } catch {
         throw new Error(`Web Media Comment on ${cleanMediaId} returned unparseable JSON: ${res.data.slice(0, 200)}`);
       }
 
+      if (parsed.error) {
+        const errDetail = parsed.errorSummary || parsed.errorDescription || JSON.stringify(parsed.error);
+        throw new Error(`Instagram mutation rejected with error ${parsed.error}: ${errDetail}`);
+      }
+
+      if (parsed.errors && parsed.errors.length > 0) {
+        throw new Error(`Web Media Comment GraphQL error: ${parsed.errors[0].message || JSON.stringify(parsed.errors)}`);
+      }
+
       const commentCreate = parsed.data?.xig_comment_create;
-      if (commentCreate?.comment_dict) {
+      if (commentCreate?.comment_dict?.pk) {
         const dict = commentCreate.comment_dict;
         return {
-          id: String(dict.pk || dict.id || Date.now()),
+          id: String(dict.pk),
           text: dict.text || text,
           timestamp: dict.created_at ? new Date(dict.created_at * 1000).toISOString() : new Date().toISOString(),
           like_count: 0,
@@ -234,11 +244,7 @@ export class WebTwin {
         };
       }
 
-      if (parsed.errors && parsed.errors.length > 0) {
-        throw new Error(`Web Media Comment GraphQL error: ${parsed.errors[0].message || JSON.stringify(parsed.errors)}`);
-      }
-
-      throw new Error(`Web Media Comment on ${cleanMediaId} unexpected response shape: ${res.data.slice(0, 300)}`);
+      throw new Error(`Web Media Comment on ${cleanMediaId} failed: Server did not return a valid comment PK (Response: ${res.data.slice(0, 300)})`);
     }
 
     throw new Error(`Web Media Comment on ${cleanMediaId} returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
