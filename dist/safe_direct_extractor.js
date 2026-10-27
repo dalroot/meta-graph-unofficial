@@ -5,8 +5,7 @@
 import * as fs from 'node:fs';
 import { TwinTransport } from './twins/transport.js';
 // Enforce local socks5 proxy for TwinTransport
-process.env.ALL_PROXY = process.env.ALL_PROXY || 'socks5://127.0.0.1:10808';
-process.env.HTTPS_PROXY = process.env.HTTPS_PROXY || 'socks5://127.0.0.1:10808';
+// Ensure standard network environment
 const CB_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/circuit_breaker.json';
 const SESSION_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/instagram_session.json';
 const OUTPUT_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/scratch/extracted_direct_threads.json';

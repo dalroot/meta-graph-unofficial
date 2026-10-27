@@ -15,7 +15,7 @@ import { DeviceTwin } from './twins/device_twin.js';
 
 const CB_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/circuit_breaker.json';
 const SESSION_PATH = '/home/hokar/Documents/antigravity/hopeful-bell/instagram_session.json';
-const PROXY_URL = process.env.HTTPS_PROXY || process.env.ALL_PROXY || 'socks5://127.0.0.1:10808';
+const PROXY_URL = process.env.HTTPS_PROXY || process.env.ALL_PROXY;
 
 const TARGET_RECIPIENT = {
   username: 'tawanatallks',
@@ -109,7 +109,7 @@ async function main() {
   }
   headers['X-IG-Android-ID'] = fp.android_id;
 
-  const agent = new SocksProxyAgent(PROXY_URL);
+  const agent = PROXY_URL ? new SocksProxyAgent(PROXY_URL) : undefined;
 
   const reqOptions: https.RequestOptions = {
     hostname: 'i.instagram.com',

@@ -10,8 +10,8 @@ import { TwinTransport } from '../twins/transport.js';
 export class UniversalDownloader {
     transport;
     downloadsDir;
-    constructor(downloadsDir, proxyUrl = 'socks5://127.0.0.1:10808') {
-        this.transport = new TwinTransport({ proxyUrl });
+    constructor(downloadsDir) {
+        this.transport = new TwinTransport();
         this.downloadsDir = downloadsDir || path.resolve(process.cwd(), 'scratch/downloads');
         if (!fs.existsSync(this.downloadsDir)) {
             try {

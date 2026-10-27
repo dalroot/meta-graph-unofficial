@@ -132,7 +132,7 @@ export class GhostService {
   private client: TwinGraph;
 
   constructor(client?: TwinGraph) {
-    this.client = client || new TwinGraph({ offlineMode: true });
+    this.client = client || new TwinGraph({ offlineMode: process.env.OFFLINE_MODE === 'true' });
   }
 
   /**

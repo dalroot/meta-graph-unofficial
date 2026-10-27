@@ -26,8 +26,8 @@ export class UniversalDownloader {
   private transport: TwinTransport;
   private downloadsDir: string;
 
-  constructor(downloadsDir?: string, proxyUrl: string = 'socks5://127.0.0.1:10808') {
-    this.transport = new TwinTransport({ proxyUrl });
+  constructor(downloadsDir?: string) {
+    this.transport = new TwinTransport();
     this.downloadsDir = downloadsDir || path.resolve(process.cwd(), 'scratch/downloads');
     if (!fs.existsSync(this.downloadsDir)) {
       try {

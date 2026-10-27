@@ -2,7 +2,6 @@
  * Transport Layer for TwinGraph
  * Supports Tigon/Liger emulation and transparent SOCKS5/HTTPS proxying
  */
-import * as https from 'node:https';
 export interface TransportResponse {
     status: number;
     statusText: string;
@@ -16,11 +15,7 @@ export interface TransportRequestOptions {
     timeoutMs?: number;
 }
 export declare class TwinTransport {
-    private agent?;
-    constructor(options?: {
-        proxyUrl?: string;
-        agent?: https.Agent;
-    });
+    constructor();
     request(urlStr: string, options?: TransportRequestOptions): Promise<TransportResponse>;
     /**
      * Performs an HTTP request and returns raw binary Buffer

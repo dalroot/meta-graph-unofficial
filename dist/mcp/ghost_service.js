@@ -9,7 +9,7 @@ import { TwinGraph } from '../twin_graph.js';
 export class GhostService {
     client;
     constructor(client) {
-        this.client = client || new TwinGraph({ offlineMode: true });
+        this.client = client || new TwinGraph({ offlineMode: process.env.OFFLINE_MODE === 'true' });
     }
     /**
      * 1. Ghost Profile Inspection

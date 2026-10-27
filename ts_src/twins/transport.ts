@@ -6,7 +6,6 @@
 import * as https from 'node:https';
 import * as http from 'node:http';
 import * as zlib from 'node:zlib';
-import { SocksProxyAgent } from 'socks-proxy-agent';
 
 export interface TransportResponse {
   status: number;
@@ -23,19 +22,7 @@ export interface TransportRequestOptions {
 }
 
 export class TwinTransport {
-  private agent?: https.Agent;
-
-  constructor(options: { proxyUrl?: string; agent?: https.Agent } = {}) {
-    if (options.agent) {
-      this.agent = options.agent;
-    } else {
-      const defaultProxy = process.env.NO_PROXY ? undefined : 'socks5://127.0.0.1:10808';
-      const proxyUrl = options.proxyUrl || process.env.HTTPS_PROXY || process.env.ALL_PROXY || process.env.HTTP_PROXY || defaultProxy;
-      if (proxyUrl) {
-        this.agent = new SocksProxyAgent(proxyUrl) as unknown as https.Agent;
-      }
-    }
-  }
+  constructor() {}
 
   public async request(
     urlStr: string,
@@ -58,7 +45,6 @@ export class TwinTransport {
           path: `${url.pathname}${url.search}`,
           method: method,
           headers: headers,
-          agent: this.agent,
           timeout: timeout
         },
         (res) => {
@@ -133,7 +119,6 @@ export class TwinTransport {
           path: `${url.pathname}${url.search}`,
           method: method,
           headers: headers,
-          agent: this.agent,
           timeout: timeout
         },
         (res) => {
@@ -225,7 +210,6 @@ export class TwinTransport {
             path: `${url.pathname}${url.search}`,
             method: method,
             headers: headers,
-            agent: this.agent,
             timeout: timeout
           },
           (res) => {

@@ -26,9 +26,7 @@ export class DiscoveryTwin {
     constructor(deviceTwin, options = {}) {
         this.deviceTwin = deviceTwin || new DeviceTwin();
         this.graphqlTwin = new GraphQLTwin(this.deviceTwin);
-        this.transport = new TwinTransport({
-            proxyUrl: options.proxyUrl || process.env.HTTPS_PROXY || process.env.ALL_PROXY || 'socks5://127.0.0.1:10808'
-        });
+        this.transport = new TwinTransport();
         this.offlineMode = options.offlineMode !== undefined
             ? options.offlineMode
             : !this.deviceTwin.hasActiveSession();

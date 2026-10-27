@@ -18,7 +18,7 @@ export interface MediaDownloadResult {
 export declare class UniversalDownloader {
     private transport;
     private downloadsDir;
-    constructor(downloadsDir?: string, proxyUrl?: string);
+    constructor(downloadsDir?: string);
     extractShortcode(input: string): string;
     downloadMedia(shortcodeOrUrl: string, options?: {
         downloadVideo?: boolean;

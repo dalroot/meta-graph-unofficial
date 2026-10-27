@@ -17,7 +17,6 @@ import { DeviceTwin } from './device_twin.js';
 import { GraphSearchResponse, GraphSearchUser, GraphSearchHashtag, SearchOptions, ViralExplorePost, ViralExploreOptions, FollowingListOptions, FollowingListResponse } from '../types/graph.js';
 export interface DiscoveryTwinOptions {
     offlineMode?: boolean;
-    proxyUrl?: string;
     circuitBreakerPath?: string;
 }
 export declare class DiscoveryTwin {

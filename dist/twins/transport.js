@@ -5,21 +5,8 @@
 import * as https from 'node:https';
 import * as http from 'node:http';
 import * as zlib from 'node:zlib';
-import { SocksProxyAgent } from 'socks-proxy-agent';
 export class TwinTransport {
-    agent;
-    constructor(options = {}) {
-        if (options.agent) {
-            this.agent = options.agent;
-        }
-        else {
-            const defaultProxy = process.env.NO_PROXY ? undefined : 'socks5://127.0.0.1:10808';
-            const proxyUrl = options.proxyUrl || process.env.HTTPS_PROXY || process.env.ALL_PROXY || process.env.HTTP_PROXY || defaultProxy;
-            if (proxyUrl) {
-                this.agent = new SocksProxyAgent(proxyUrl);
-            }
-        }
-    }
+    constructor() { }
     async request(urlStr, options = {}) {
         const url = new URL(urlStr);
         const method = (options.method || 'GET').toUpperCase();
@@ -35,7 +22,6 @@ export class TwinTransport {
                 path: `${url.pathname}${url.search}`,
                 method: method,
                 headers: headers,
-                agent: this.agent,
                 timeout: timeout
             }, (res) => {
                 let stream = res;
@@ -100,7 +86,6 @@ export class TwinTransport {
                 path: `${url.pathname}${url.search}`,
                 method: method,
                 headers: headers,
-                agent: this.agent,
                 timeout: timeout
             }, (res) => {
                 let stream = res;
@@ -171,7 +156,6 @@ export class TwinTransport {
                     path: `${url.pathname}${url.search}`,
                     method: method,
                     headers: headers,
-                    agent: this.agent,
                     timeout: timeout
                 }, (res) => {
                     const statusCode = res.statusCode || 0;
