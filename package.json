@@ -1,0 +1,43 @@
+{
+  "name": "meta-graph-unofficial",
+  "version": "0.3.0",
+  "description": "High-Performance Unofficial Meta Graph API Library for Instagram & Facebook (REA-Engineered, Zero-Browser, Strict OS/Browser Fingerprint Profiles)",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test dist/test_twingraph.js",
+    "demo": "node --experimental-strip-types examples/verified_capabilities_demo.ts",
+    "demo:dashboard": "node --experimental-strip-types examples/dashboard_demo.ts",
+    "demo:granular": "node --experimental-strip-types examples/granular_content_insights_demo.ts",
+    "cli": "node --experimental-strip-types scripts/cli.ts",
+    "action": "node --experimental-strip-types scripts/cli.ts",
+    "mcp": "node dist/mcp/server.js",
+    "mcp:dev": "node --experimental-strip-types ts_src/mcp/server.ts"
+  },
+  "keywords": [
+    "instagram-api",
+    "facebook-graph-api",
+    "meta-graph",
+    "unofficial-api",
+    "reverse-engineered",
+    "rea",
+    "smart-direct",
+    "anti-detect"
+  ],
+  "author": "T4wroot",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "socks-proxy-agent": "^10.1.0",
+    "undici": "^8.12.2",
+    "zod": "^4.6.7"
+  }
+}
