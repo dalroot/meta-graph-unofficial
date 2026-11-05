@@ -3,9 +3,11 @@
  * TwinGraph Global CLI — Multi-tool CLI for Meta Graph Unofficial
  * 
  * Works from any directory.
+ * Automatically detects local proxy ports (10808, 7890, 2080) in filtered regions.
  */
 
 import path from 'node:path';
+import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import readline from 'node:readline';
@@ -14,11 +16,42 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
+// Helper to check if a local port is listening (timeout: 150ms)
+function isPortOpen(port) {
+  return new Promise((resolve) => {
+    const sock = net.createConnection({ host: '127.0.0.1', port, timeout: 150 }, () => {
+      sock.destroy();
+      resolve(true);
+    });
+    sock.on('error', () => resolve(false));
+    sock.on('timeout', () => { sock.destroy(); resolve(false); });
+  });
+}
+
+// Auto-detect proxy if not already exported in terminal environment
+async function initProxy() {
+  const existing = process.env.ALL_PROXY || process.env.HTTPS_PROXY || process.env.all_proxy || process.env.http_proxy;
+  if (existing) return;
+
+  const candidatePorts = [10808, 7890, 2080, 10809];
+  for (const port of candidatePorts) {
+    if (await isPortOpen(port)) {
+      process.env.ALL_PROXY = `socks5://127.0.0.1:${port}`;
+      break;
+    }
+  }
+}
+
+await initProxy();
+
 // Dynamic import of compiled GhostService from project root
 const { GhostService } = await import(path.join(projectRoot, 'dist/mcp/ghost_service.js'));
 
 const ghost = new GhostService();
-const [,, command, arg1, arg2] = process.argv;
+const args = process.argv.slice(2);
+const command = args[0];
+const arg1 = args[1];
+const arg2 = args[2];
 
 function printUsage() {
   console.log(`
