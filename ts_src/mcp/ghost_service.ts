@@ -190,6 +190,10 @@ export class GhostService {
       };
 
       const res = await this.transport.request(url, { method: 'GET', headers, timeoutMs: 25000 });
+      if (res.status === 302) {
+        const loc = res.headers['location'] || '';
+        throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server or wait a moment.`);
+      }
       if (res.status === 200) {
         const data = res.data;
         let id = '0';
@@ -254,11 +258,10 @@ export class GhostService {
 
         return { id, followers, following, posts, biography, fullName, profilePicUrl, isVerified };
       }
-    } catch {
-      // In case of network timeout
+      throw new Error(`Instagram returned HTTP ${res.status} (${res.statusText || 'Unexpected response'})`);
+    } catch (err: any) {
+      throw new Error(`Ghost Profile Error for @${cleanUser}: ${err.message}`);
     }
-
-    return { id: '0', followers: 0, following: 0, posts: 0, biography: '', fullName: cleanUser, profilePicUrl: '', isVerified: false };
   }
 
   /**
@@ -321,6 +324,9 @@ export class GhostService {
         timeoutMs: 30000
       });
 
+      if (res.status === 302) {
+        throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server.`);
+      }
       if (res.status === 200 && res.data) {
         const data = res.data;
         const jsonScripts = [...data.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
@@ -419,6 +425,9 @@ export class GhostService {
 
     try {
       const res = await this.transport.request(url, { headers, timeoutMs: 25000 });
+      if (res.status === 302) {
+        throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server.`);
+      }
       if (res.status === 200 && res.data) {
         const metaDescMatch = res.data.match(/<meta\s+(?:name="description"|property="og:description")\s+content="([^"]*)"/i);
         if (metaDescMatch) {
@@ -502,6 +511,9 @@ export class GhostService {
 
     try {
       const res = await this.transport.request(url, { headers, timeoutMs: 25000 });
+      if (res.status === 302) {
+        throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server.`);
+      }
       if (res.status === 200 && res.data) {
         const commentsList: Array<{
           id: string;
