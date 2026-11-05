@@ -2,7 +2,7 @@
 
 ## 1. Overview & Objective
 
-The **Ghost Mode MCP Server** (`meta-graph-ghost-mcp`) is a Model Context Protocol (MCP) server that exposes 100% anonymous, read-only Instagram intelligence tools to AI agents (Claude Desktop, Cursor, Antigravity, or custom LLM agents).
+The **Ghost Mode MCP Server** (`meta-graph-ghost-mcp`) is a standard Model Context Protocol (MCP) server that exposes 100% anonymous, read-only Instagram intelligence tools to AI agents (Claude Desktop, Cursor, Antigravity, or custom LLM agents).
 
 It operates under strict **Zero-Account / Zero-Cookie (Pure Guest)** constraints:
 - No login credentials or cookies required.
@@ -15,8 +15,8 @@ It operates under strict **Zero-Account / Zero-Cookie (Pure Guest)** constraints
 
 ## 2. Server Location & File Structure
 
-- **TypeScript Source:** [`ts_src/mcp/server.ts`](../ts_src/mcp/server.ts)
-- **Service Implementation:** [`ts_src/mcp/ghost_service.ts`](../ts_src/mcp/ghost_service.ts)
+- **TypeScript Source:** `ts_src/mcp/server.ts`
+- **Service Implementation:** `ts_src/mcp/ghost_service.ts`
 - **Compiled Binary:** `dist/mcp/server.js`
 - **Automated JSON-RPC Test Harness:** `scratch/test_mcp_client.js`
 
@@ -26,38 +26,27 @@ It operates under strict **Zero-Account / Zero-Cookie (Pure Guest)** constraints
 
 ### Step 1: Install Dependencies & Build
 ```bash
-# Navigate to repository root
-cd /home/hokar/Documents/antigravity/hopeful-bell
+# Clone or navigate to the repository directory
+cd <PATH_TO_REPOSITORY>
 
-# Ensure dependencies are installed
+# Install dependencies
 npm install
 
-# Build TypeScript to dist/
+# Compile TypeScript
 npm run build
 ```
 
-### Step 2: Run Automated JSON-RPC Verification Script
-We have provided an automated test runner that spawns the server, performs the MCP handshake, lists tools, and executes a test call:
+### Step 2: Automated JSON-RPC Verification Script
+Run the automated test runner to verify MCP handshake and protocol compliance:
 ```bash
 node scratch/test_mcp_client.js
 ```
-*Expected Output:*
-```text
-Sending initialize...
-[MetaGraph MCP] Ghost Mode Server running on stdio (v1.0.0)
-[MCP Response]: Protocol 2024-11-05 initialized
-Sending tools/list...
-[MCP Response]: Received 7 tools
-Testing tool execution: ghost_get_profile for @cristiano...
-[MCP Response]: { "username": "cristiano", "followers_count": 680000000, ... }
-✅ MCP Test Completed Successfully!
-```
 
-### Step 3: Run Server Directly on Stdio
-To run the server standalone (for debugging or manual pipe):
+### Step 3: Standalone Stdio Execution
+To run the server directly on stdio:
 ```bash
 npm run mcp
-# or directly:
+# or:
 node dist/mcp/server.js
 ```
 
@@ -65,67 +54,63 @@ node dist/mcp/server.js
 
 ## 4. Connecting the MCP Server to AI Agents
 
-### Option A: Claude Desktop Configuration
-Add the server to your Claude Desktop configuration file (`~/.config/Claude/claude_desktop_config.json` on Linux, or `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+Replace `<REPO_DIR>` with the absolute path to your cloned repository.
 
+### Option A: Claude Desktop Configuration (`claude_desktop_config.json`)
 ```json
 {
   "mcpServers": {
     "instagram-ghost": {
       "command": "node",
-      "args": [
-        "/home/hokar/Documents/antigravity/hopeful-bell/dist/mcp/server.js"
-      ]
+      "args": ["<REPO_DIR>/dist/mcp/server.js"]
     }
   }
 }
 ```
 
 ### Option B: Cursor / Antigravity MCP Configuration
-In Cursor or Antigravity Settings > Features > MCP:
+In Settings > Features > MCP > Add New MCP Server:
 - **Name:** `instagram-ghost`
 - **Type:** `command`
-- **Command:** `node /home/hokar/Documents/antigravity/hopeful-bell/dist/mcp/server.js`
+- **Command:** `node <REPO_DIR>/dist/mcp/server.js`
 
 ---
 
-## 5. Test Suite Checklist (All 7 Ghost Tools)
+## 5. Tool Verification Suite (Dynamic Inputs)
 
-Please test each of the following 7 tools and verify the JSON response schema:
+All tools accept dynamic arguments. Test each tool using arbitrary public targets:
 
 - [ ] **1. `ghost_get_profile`**
-  - **Input:** `{"username": "cristiano"}` or `{"username": "instagram"}`
+  - **Input Schema:** `{"username": "<target_username>"}`
   - **Verification:** Returns `id`, `username`, `full_name`, `followers_count`, `following_count`, `media_count`, `is_verified`, and `profile_pic_url_hd`.
 
 - [ ] **2. `ghost_get_posts`**
-  - **Input:** `{"username": "instagram", "limit": 12, "feedType": "all"}`
-  - **Verification:** Returns an array of recent posts/reels with `shortcode`, `caption`, `taken_at`, `like_count`, `comment_count`, and media URLs.
+  - **Input Schema:** `{"username": "<target_username>", "limit": 12, "feedType": "all"}`
+  - **Verification:** Returns recent posts/reels with `shortcode`, `caption`, `taken_at`, `like_count`, `comment_count`, and media URLs.
 
 - [ ] **3. `ghost_get_media_metrics`**
-  - **Input:** `{"mediaId": "DQQMJ9dER-7"}`
-  - **Verification:** Returns granular metrics for the specific reel, including estimated views, likes, comments, and engagement rate.
+  - **Input Schema:** `{"mediaId": "<media_shortcode_or_id>"}`
+  - **Verification:** Returns granular metrics for a specific post or reel (views, plays, likes, comments, engagement rate).
 
 - [ ] **4. `ghost_get_comments`**
-  - **Input:** `{"mediaId": "DQQMJ9dER-7", "limit": 15}`
-  - **Verification:** Returns a list of public comments with commenter username, comment text, timestamp, and likes.
+  - **Input Schema:** `{"mediaId": "<media_shortcode_or_id>", "limit": 15}`
+  - **Verification:** Returns public comments with author username, text, timestamp, and likes.
 
 - [ ] **5. `ghost_search`**
-  - **Input:** `{"query": "technology", "type": "all"}`
-  - **Verification:** Returns matching public accounts and hashtags without saving history to any account.
+  - **Input Schema:** `{"query": "<keyword_or_hashtag>", "type": "all"}`
+  - **Verification:** Returns matching public accounts and hashtags without saving history.
 
 - [ ] **6. `ghost_explore_viral`**
-  - **Input:** `{"limit": 10, "minCommentRatio": 0.02}`
-  - **Verification:** Extracts viral reels and high-engagement discussion posts.
+  - **Input Schema:** `{"limit": 10, "minCommentRatio": 0.02}`
+  - **Verification:** Extracts viral posts and high-discussion content from explore.
 
 - [ ] **7. `ghost_audit_account`**
-  - **Input:** `{"username": "tawanatallks", "sampleCount": 15}`
-  - **Verification:** End-to-end automated analytical audit: total plays, average views per reel, overall engagement rate, top 3 viral reels, and discussion drivers.
+  - **Input Schema:** `{"username": "<target_username>", "sampleCount": 15}`
+  - **Verification:** Automated analytical audit: average views, overall engagement rate, top viral content, and discussion drivers.
 
 ---
 
-## 6. Reporting Issues & Edge Cases
-
-When reporting issues, please provide:
-1. Target username / media shortcode used.
-2. The exact JSON error payload returned by the server.
-3. Whether Instagram returned a rate limit or HTTP 429/checkpoint.
+## 6. Edge Cases to Verify
+1. Non-existent username (proper 404 / error JSON returned).
+2. Private profile handling.
+3. Media shortcode with disabled comments.
