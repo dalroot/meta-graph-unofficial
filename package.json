@@ -4,6 +4,9 @@
   "description": "High-Performance Unofficial Meta Graph API Library for Instagram & Facebook (REA-Engineered, Zero-Browser, Strict OS/Browser Fingerprint Profiles)",
   "main": "src/index.js",
   "type": "module",
+  "bin": {
+    "twingraph": "./bin/twingraph.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "node --test dist/test_twingraph.js",
