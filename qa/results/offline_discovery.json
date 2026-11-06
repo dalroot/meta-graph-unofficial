@@ -1,0 +1,33 @@
+{
+  "mode": "offline",
+  "tested_at": "2026-11-06T20:38:28.342Z",
+  "results": [
+    {
+      "tool": "ghost_search",
+      "arguments": {
+        "query": "artificial intelligence",
+        "type": "users"
+      },
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "{\n  \"users\": [],\n  \"hashtags\": [],\n  \"rank_token\": \"c9284fa0-82a1-432d-86fb-7389a9128e01_\",\n  \"status\": \"ok\",\n  \"total_items\": 0,\n  \"raw_items\": []\n}"
+        }
+      ]
+    },
+    {
+      "tool": "ghost_explore_viral",
+      "arguments": {
+        "limit": 5
+      },
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "[]"
+        }
+      ]
+    }
+  ]
+}
