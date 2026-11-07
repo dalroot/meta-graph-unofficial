@@ -1,6 +1,6 @@
 {
   "mode": "offline",
-  "tested_at": "2026-11-06T20:38:28.342Z",
+  "tested_at": "2026-11-07T12:25:13.065Z",
   "results": [
     {
       "tool": "ghost_search",
@@ -8,11 +8,11 @@
         "query": "artificial intelligence",
         "type": "users"
       },
-      "isError": false,
+      "isError": true,
       "content": [
         {
           "type": "text",
-          "text": "{\n  \"users\": [],\n  \"hashtags\": [],\n  \"rank_token\": \"c9284fa0-82a1-432d-86fb-7389a9128e01_\",\n  \"status\": \"ok\",\n  \"total_items\": 0,\n  \"raw_items\": []\n}"
+          "text": "{\n  \"error\": {\n    \"message\": \"Search is unavailable in offline mode.\",\n    \"code\": \"GHOST_TOOL_ERROR\",\n    \"type\": \"MCPToolException\"\n  }\n}"
         }
       ]
     },
@@ -21,11 +21,11 @@
       "arguments": {
         "limit": 5
       },
-      "isError": false,
+      "isError": true,
       "content": [
         {
           "type": "text",
-          "text": "[]"
+          "text": "{\n  \"error\": {\n    \"message\": \"Viral explore is unavailable in offline mode.\",\n    \"code\": \"GHOST_TOOL_ERROR\",\n    \"type\": \"MCPToolException\"\n  }\n}"
         }
       ]
     }

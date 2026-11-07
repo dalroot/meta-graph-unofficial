@@ -40,7 +40,7 @@ export interface GhostPostItem {
   media_type: string;
   media_product_type?: string;
   caption: string;
-  timestamp: string;
+  timestamp?: string;
   like_count: number;
   comment_count: number;
   video_play_count?: number;
@@ -66,7 +66,7 @@ export interface GhostMediaMetricsResult {
   shortcode: string;
   media_type: string;
   caption: string;
-  timestamp: string;
+  timestamp?: string;
   metrics: {
     video_plays?: number;
     video_views?: number;
@@ -77,6 +77,7 @@ export interface GhostMediaMetricsResult {
     reach?: number;
     impressions?: number;
     engagement_rate: number;
+    comment_to_like_ratio?: number;
   };
   retention?: {
     avg_watch_time_seconds?: number;
@@ -260,7 +261,8 @@ export class GhostService {
       }
       throw new Error(`Instagram returned HTTP ${res.status} (${res.statusText || 'Unexpected response'})`);
     } catch (err: any) {
-      throw new Error(`Ghost Profile Error for @${cleanUser}: ${err.message}`);
+      const msg = err?.message || err?.code || String(err || 'Connection failure');
+      throw new Error(`Ghost Profile Error for @${cleanUser}: ${msg}`);
     }
   }
 
@@ -307,97 +309,108 @@ export class GhostService {
 
     const posts: GhostPostItem[] = [];
     const limit = params.limit || 12;
+    let hasNextPage = false;
+    let nextCursor: string | undefined = undefined;
 
-    try {
-      const url = `https://www.instagram.com/${cleanUsername || profile?.username}/`;
-      const res = await this.transport.request(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1',
-          'Upgrade-Insecure-Requests': '1'
-        },
-        timeoutMs: 30000
-      });
+    const url = `https://www.instagram.com/${cleanUsername || profile?.username}/`;
+    const res = await this.transport.request(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1'
+      },
+      timeoutMs: 30000
+    });
 
-      if (res.status === 302) {
-        throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server.`);
-      }
-      if (res.status === 200 && res.data) {
-        const data = res.data;
-        const jsonScripts = [...data.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
-        
-        for (const s of jsonScripts) {
-          const content = s[1];
-          if (content.includes('edge_owner_to_timeline_media') || content.includes('xdt_api__v1__feed__user_timeline') || (content.includes('edges') && content.includes('__isXIGPolarisMedia'))) {
-            try {
-              const json = JSON.parse(content);
-              const findEdges = (obj: any): any[] | null => {
-                if (!obj || typeof obj !== 'object') return null;
-                if (Array.isArray(obj.edges) && obj.edges.length > 0 && obj.edges[0]?.node) return obj.edges;
-                for (const k of Object.keys(obj)) {
-                  const r = findEdges(obj[k]);
-                  if (r) return r;
-                }
-                return null;
-              };
+    if (res.status === 302) {
+      throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server.`);
+    }
+    if (res.status !== 200) {
+      throw new Error(`Failed to fetch timeline for @${cleanUsername}: Instagram returned HTTP ${res.status} (${res.statusText || 'Failed to load timeline'})`);
+    }
 
-              const edges = findEdges(json);
-              if (edges && edges.length > 0) {
-                for (const e of edges) {
-                  const n = e.node;
-                  const isVideo = n.media_type === 2 || n.__typename === 'XIGPolarisVideoMedia';
-                  const shortcode = n.code || n.shortcode || '';
-                  if (!shortcode) continue;
-
-                  const captionText = n.caption?.text || n.accessibility_caption || '';
-                  posts.push({
-                    id: n.id || n.pk || shortcode,
-                    shortcode,
-                    media_type: isVideo ? 'VIDEO' : 'IMAGE',
-                    media_product_type: isVideo ? 'REELS' : 'FEED',
-                    caption: captionText,
-                    timestamp: n.taken_at ? new Date(n.taken_at * 1000).toISOString() : new Date().toISOString(),
-                    like_count: n.like_count ?? 0,
-                    comment_count: n.comment_count ?? 0,
-                    video_play_count: n.video_play_count || undefined,
-                    thumbnail_url: n.display_uri || n.display_url || '',
-                    permalink: `https://www.instagram.com/p/${shortcode}/`
-                  });
-
-                  if (posts.length >= limit) break;
-                }
-                break;
+    if (res.data) {
+      const data = res.data;
+      const jsonScripts = [...data.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
+      
+      for (const s of jsonScripts) {
+        const content = s[1];
+        if (content.includes('edge_owner_to_timeline_media') || content.includes('xdt_api__v1__feed__user_timeline') || (content.includes('edges') && content.includes('__isXIGPolarisMedia'))) {
+          try {
+            const json = JSON.parse(content);
+            const findContainer = (obj: any): { edges: any[]; page_info?: any } | null => {
+              if (!obj || typeof obj !== 'object') return null;
+              if (Array.isArray(obj.edges) && obj.edges.length > 0 && obj.edges[0]?.node) {
+                return { edges: obj.edges, page_info: obj.page_info };
               }
-            } catch {
-              // Non-JSON script
+              for (const k of Object.keys(obj)) {
+                const r = findContainer(obj[k]);
+                if (r) return r;
+              }
+              return null;
+            };
+
+            const container = findContainer(json);
+            if (container && container.edges.length > 0) {
+              if (container.page_info) {
+                hasNextPage = Boolean(container.page_info.has_next_page);
+                nextCursor = container.page_info.end_cursor || undefined;
+              } else {
+                hasNextPage = container.edges.length > limit;
+              }
+
+              for (const e of container.edges) {
+                const n = e.node;
+                const isVideo = n.media_type === 2 || n.__typename === 'XIGPolarisVideoMedia' || Boolean(n.is_video);
+                const mediaType = isVideo ? 'VIDEO' : 'IMAGE';
+                const mediaProductType = isVideo ? 'REELS' : 'FEED';
+
+                // Apply feedType filter BEFORE limiting
+                if (params.feedType === 'reels' && mediaType !== 'VIDEO') continue;
+                if (params.feedType === 'posts' && mediaType === 'VIDEO') continue;
+
+                const shortcode = n.code || n.shortcode || '';
+                if (!shortcode) continue;
+
+                const captionText = n.caption?.text || n.accessibility_caption || '';
+                posts.push({
+                  id: String(n.id || n.pk || shortcode),
+                  shortcode,
+                  media_type: mediaType,
+                  media_product_type: mediaProductType,
+                  caption: captionText,
+                  timestamp: n.taken_at ? new Date(n.taken_at * 1000).toISOString() : undefined,
+                  like_count: typeof n.like_count === 'number' ? n.like_count : (n.edge_media_preview_like?.count ?? 0),
+                  comment_count: typeof n.comment_count === 'number' ? n.comment_count : (n.edge_media_to_comment?.count ?? 0),
+                  video_play_count: n.video_play_count || undefined,
+                  thumbnail_url: n.display_uri || n.display_url || '',
+                  permalink: `https://www.instagram.com/p/${shortcode}/`
+                });
+
+                if (posts.length >= limit) break;
+              }
+              break;
             }
+          } catch {
+            // Non-JSON script
           }
         }
       }
-    } catch {
-      // In case of request timeout
-    }
-
-    // Apply feedType filter if requested
-    let filteredPosts = posts;
-    if (params.feedType === 'reels') {
-      filteredPosts = posts.filter(p => p.media_type === 'VIDEO' || p.media_product_type === 'REELS');
-    } else if (params.feedType === 'posts') {
-      filteredPosts = posts.filter(p => p.media_type !== 'VIDEO');
     }
 
     return {
       username: profile?.username || cleanUsername || 'unknown',
       user_id: profile?.id || params.userId || '0',
       total_media_count: profile?.media_count || posts.length,
-      retrieved_count: filteredPosts.length,
-      has_next_page: posts.length >= 12,
-      posts: filteredPosts
+      retrieved_count: posts.length,
+      has_next_page: hasNextPage,
+      next_cursor: nextCursor,
+      posts
     };
   }
 
@@ -420,64 +433,82 @@ export class GhostService {
 
     let likes = 0;
     let comments = 0;
+    let videoPlays: number | undefined = undefined;
     let caption = '';
-    let timestamp = new Date().toISOString();
+    let timestamp: string | undefined = undefined;
+    let mediaType = 'IMAGE';
 
-    try {
-      const res = await this.transport.request(url, { headers, timeoutMs: 25000 });
-      if (res.status === 302) {
-        throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server.`);
+    const res = await this.transport.request(url, { headers, timeoutMs: 25000 });
+    if (res.status === 302) {
+      throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server.`);
+    }
+    if (res.status !== 200) {
+      throw new Error(`Failed to fetch media ${cleanId}: Instagram returned HTTP ${res.status} (${res.statusText || 'Inaccessible'})`);
+    }
+
+    if (res.data) {
+      const data = res.data;
+      if (data.includes('og:type" content="video') || data.includes('"video_url"') || data.includes('video_play_count') || data.includes('XIGPolarisVideoMedia')) {
+        mediaType = 'VIDEO';
       }
-      if (res.status === 200 && res.data) {
-        const metaDescMatch = res.data.match(/<meta\s+(?:name="description"|property="og:description")\s+content="([^"]*)"/i);
-        if (metaDescMatch) {
-          const rawDesc = this.decodeHtml(metaDescMatch[1]);
-          const m = rawDesc.match(/([0-9,KMkm.]+)\s*likes,\s*([0-9,KMkm.]+)\s*comments/i);
-          if (m) {
-            likes = this.parseCount(m[1]);
-            comments = this.parseCount(m[2]);
-          }
-          const capMatch = rawDesc.match(/:\s*"(?:‎)?([\s\S]*?)(?:‎)?"\s*$/);
-          if (capMatch) {
-            caption = capMatch[1].trim();
-          }
-        }
 
-        const jsonScripts = [...res.data.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
-        for (const s of jsonScripts) {
-          const c = s[1];
-          if (c.includes('like_count') && (c.includes('XIGPolarisMedia') || c.includes('POLARIS_'))) {
-            try {
-              const json = JSON.parse(c);
-              const search = (obj: any) => {
-                if (!obj || typeof obj !== 'object') return;
-                if (obj.like_count !== undefined && obj.comment_count !== undefined) {
-                  if (!likes) likes = obj.like_count;
-                  if (!comments) comments = obj.comment_count;
-                  if (obj.taken_at) timestamp = new Date(obj.taken_at * 1000).toISOString();
-                }
-                for (const k of Object.keys(obj)) search(obj[k]);
-              };
-              search(json);
-            } catch {}
-          }
+      const metaDescMatch = data.match(/<meta\s+(?:name="description"|property="og:description")\s+content="([^"]*)"/i);
+      if (metaDescMatch) {
+        const rawDesc = this.decodeHtml(metaDescMatch[1]);
+        const m = rawDesc.match(/([0-9,KMkm.]+)\s*likes,\s*([0-9,KMkm.]+)\s*comments/i);
+        if (m) {
+          likes = this.parseCount(m[1]);
+          comments = this.parseCount(m[2]);
+        }
+        const capMatch = rawDesc.match(/:\s*"(?:‎)?([\s\S]*?)(?:‎)?"\s*$/);
+        if (capMatch) {
+          caption = capMatch[1].trim();
         }
       }
-    } catch {}
 
-    const baseEng = likes + comments;
-    const engRate = baseEng > 0 ? Number(((baseEng / (likes * 10 || 100)) * 100).toFixed(2)) : 0;
+      const jsonScripts = [...data.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
+      for (const s of jsonScripts) {
+        const c = s[1];
+        if (c.includes('like_count') && (c.includes('XIGPolarisMedia') || c.includes('POLARIS_') || c.includes('xdt_shortcode_media'))) {
+          try {
+            const json = JSON.parse(c);
+            const search = (obj: any) => {
+              if (!obj || typeof obj !== 'object') return;
+              if (obj.like_count !== undefined && obj.comment_count !== undefined) {
+                if (!likes) likes = obj.like_count;
+                if (!comments) comments = obj.comment_count;
+                if (obj.video_play_count) videoPlays = obj.video_play_count;
+                if (obj.is_video) mediaType = 'VIDEO';
+                if (obj.taken_at) timestamp = new Date(obj.taken_at * 1000).toISOString();
+                if (obj.caption?.text) caption = obj.caption.text;
+                else if (typeof obj.caption === 'string') caption = obj.caption;
+                else if (obj.accessibility_caption && !caption) caption = obj.accessibility_caption;
+              }
+              for (const k of Object.keys(obj)) search(obj[k]);
+            };
+            search(json);
+          } catch {}
+        }
+      }
+    }
+
+    const commentToLikeRatio = likes > 0 ? Number((comments / likes).toFixed(4)) : undefined;
+    const engRate = videoPlays && videoPlays > 0
+      ? Number((((likes + comments) / videoPlays) * 100).toFixed(2))
+      : 0;
 
     return {
       media_id: cleanId,
       shortcode: cleanId,
-      media_type: 'VIDEO',
+      media_type: mediaType,
       caption,
       timestamp,
       metrics: {
+        video_plays: videoPlays,
         likes,
         comments,
-        engagement_rate: engRate
+        engagement_rate: engRate,
+        comment_to_like_ratio: commentToLikeRatio
       }
     };
   }
@@ -492,7 +523,7 @@ export class GhostService {
       id: string;
       username: string;
       text: string;
-      timestamp: string;
+      timestamp?: string;
       like_count: number;
     }>;
   }> {
@@ -509,56 +540,52 @@ export class GhostService {
       'Upgrade-Insecure-Requests': '1'
     };
 
-    try {
-      const res = await this.transport.request(url, { headers, timeoutMs: 25000 });
-      if (res.status === 302) {
-        throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server.`);
-      }
-      if (res.status === 200 && res.data) {
-        const commentsList: Array<{
-          id: string;
-          username: string;
-          text: string;
-          timestamp: string;
-          like_count: number;
-        }> = [];
+    const res = await this.transport.request(url, { headers, timeoutMs: 25000 });
+    if (res.status === 302) {
+      throw new Error(`Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/server.`);
+    }
+    if (res.status !== 200) {
+      throw new Error(`Failed to fetch comments for ${cleanId}: Instagram returned HTTP ${res.status}`);
+    }
 
-        const jsonScripts = [...res.data.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
-        for (const s of jsonScripts) {
-          const c = s[1];
-          if (c.includes('XIGComment')) {
-            try {
-              const json = JSON.parse(c);
-              const search = (obj: any) => {
-                if (!obj || typeof obj !== 'object') return;
-                if (obj.__typename === 'XIGComment' && obj.text) {
-                  commentsList.push({
-                    id: String(obj.id || obj.pk || ''),
-                    username: obj.user?.username || 'anonymous_user',
-                    text: obj.text,
-                    timestamp: obj.created_at ? new Date(obj.created_at * 1000).toISOString() : new Date().toISOString(),
-                    like_count: obj.comment_like_count || 0
-                  });
-                }
-                for (const k of Object.keys(obj)) search(obj[k]);
-              };
-              search(json);
-            } catch {}
-          }
+    const commentsList: Array<{
+      id: string;
+      username: string;
+      text: string;
+      timestamp?: string;
+      like_count: number;
+    }> = [];
+
+    if (res.data) {
+      const jsonScripts = [...res.data.matchAll(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi)];
+      for (const s of jsonScripts) {
+        const c = s[1];
+        if (c.includes('XIGComment') || c.includes('edge_media_to_parent_comment')) {
+          try {
+            const json = JSON.parse(c);
+            const search = (obj: any) => {
+              if (!obj || typeof obj !== 'object') return;
+              if ((obj.__typename === 'XIGComment' || obj.__typename === 'Comment') && obj.text) {
+                commentsList.push({
+                  id: String(obj.id || obj.pk || ''),
+                  username: obj.user?.username || obj.owner?.username || 'anonymous_user',
+                  text: obj.text,
+                  timestamp: obj.created_at ? new Date(obj.created_at * 1000).toISOString() : undefined,
+                  like_count: obj.comment_like_count ?? obj.edge_liked_by?.count ?? 0
+                });
+              }
+              for (const k of Object.keys(obj)) search(obj[k]);
+            };
+            search(json);
+          } catch {}
         }
-
-        return {
-          media_id: cleanId,
-          total_retrieved: commentsList.length,
-          comments: commentsList.slice(0, limit)
-        };
       }
-    } catch {}
+    }
 
     return {
       media_id: cleanId,
-      total_retrieved: 0,
-      comments: []
+      total_retrieved: commentsList.length,
+      comments: commentsList.slice(0, limit)
     };
   }
 
@@ -566,14 +593,24 @@ export class GhostService {
    * 5. Ghost Search (Users & Hashtags)
    */
   public async search(query: string, type: 'users' | 'hashtags' | 'all' = 'all'): Promise<GraphSearchResponse> {
+    if (process.env.OFFLINE_MODE === 'true' || this.client.discovery.isOfflineMode()) {
+      throw new Error('Search is unavailable in offline mode.');
+    }
     const context = type === 'users' ? 'user' : type === 'hashtags' ? 'hashtag' : 'blended';
-    return this.client.discovery.search(query, { context });
+    const res = await this.client.discovery.search(query, { context });
+    if (res.status === 'auth_required') {
+      throw new Error('Instagram Search API requires an authenticated session; not available in guest mode.');
+    }
+    return res;
   }
 
   /**
    * 6. Ghost Viral & Debate Explore Radar
    */
   public async getViralExplore(limit: number = 10, minCommentRatio?: number): Promise<ViralExplorePost[]> {
+    if (process.env.OFFLINE_MODE === 'true' || this.client.discovery.isOfflineMode()) {
+      throw new Error('Viral explore is unavailable in offline mode.');
+    }
     return this.client.discovery.getViralExplore({ limit, minCommentRatio });
   }
 
@@ -606,6 +643,39 @@ export class GhostService {
       ? Number((((avgLikes + avgComments) / profile.followers_count) * 100).toFixed(2))
       : 0;
 
+    // Rank top performing reels by plays or likes
+    const sortedReels = [...reels].sort((a, b) => {
+      const playsA = a.video_play_count || a.like_count || 0;
+      const playsB = b.video_play_count || b.like_count || 0;
+      return playsB - playsA;
+    });
+    const topPerformingReels = sortedReels.slice(0, 3).map(r => ({
+      id: r.id,
+      shortcode: r.shortcode,
+      plays: r.video_play_count || 0,
+      likes: r.like_count,
+      comments: r.comment_count,
+      engagement_rate: r.video_play_count && r.video_play_count > 0
+        ? Number((((r.like_count + r.comment_count) / r.video_play_count) * 100).toFixed(2))
+        : (profile.followers_count > 0 ? Number((((r.like_count + r.comment_count) / profile.followers_count) * 100).toFixed(2)) : 0),
+      caption_snippet: r.caption ? r.caption.slice(0, 100) : '',
+      permalink: r.permalink
+    }));
+
+    // Rank discussion driver posts by comments and comment-to-like ratio
+    const sortedDiscussions = [...posts].sort((a, b) => {
+      const ratioA = a.like_count > 0 ? (a.comment_count / a.like_count) : a.comment_count;
+      const ratioB = b.like_count > 0 ? (b.comment_count / b.like_count) : b.comment_count;
+      return (ratioB + b.comment_count) - (ratioA + a.comment_count);
+    });
+    const discussionDrivers = sortedDiscussions.slice(0, 3).map(p => ({
+      id: p.id,
+      shortcode: p.shortcode,
+      comments: p.comment_count,
+      comment_to_like_ratio: p.like_count > 0 ? Number((p.comment_count / p.like_count).toFixed(3)) : p.comment_count,
+      caption_snippet: p.caption ? p.caption.slice(0, 100) : ''
+    }));
+
     return {
       target: {
         username: profile.username,
@@ -631,8 +701,8 @@ export class GhostService {
         feed_posts_count: feedPosts.length,
         reels_share_pct: posts.length > 0 ? Math.round((reels.length / posts.length) * 100) : 0
       },
-      top_performing_reels: [],
-      discussion_driver_posts: [],
+      top_performing_reels: topPerformingReels,
+      discussion_driver_posts: discussionDrivers,
       audit_timestamp: new Date().toISOString()
     };
   }

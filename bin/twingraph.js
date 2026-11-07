@@ -62,7 +62,7 @@ function printUsage() {
 Commands:
   profile   <username>            Inspect public IG profile (bio, followers, stats)
   posts     <username> [limit]    Extract recent grid posts/reels (default limit: 12)
-  reel      <shortcode_or_url>    Get metrics for a post/reel (views, likes, comments)
+  reel/metrics <shortcode_or_url> Get metrics for a post/reel (views, likes, comments)
   comments  <shortcode_or_url>    Harvest public comments from a post/reel
   search    <query>               Search users and hashtags anonymously
   viral     [limit]               Scan explore feed for viral posts
@@ -109,7 +109,8 @@ async function run() {
       }
 
       case 'reel':
-      case 'media': {
+      case 'media':
+      case 'metrics': {
         if (!arg1) throw new Error('Please specify a shortcode or URL. Example: twingraph reel DQQMJ9dER-7');
         console.log(`\n📊 [TwinGraph] Fetching metrics for: ${arg1}...`);
         const res = await ghost.getMediaMetrics(arg1);
@@ -194,7 +195,25 @@ async function run() {
         process.exit(1);
     }
   } catch (err) {
-    console.error(`\n❌ Error: ${err.message}\n`);
+    const msg = err?.message || String(err || 'Unknown error');
+    const isNetworkError =
+      msg.includes('ECONNREFUSED') ||
+      msg.includes('ETIMEDOUT') ||
+      msg.includes('ENOTFOUND') ||
+      msg.includes('EHOSTUNREACH') ||
+      msg.includes('timeout') ||
+      msg.includes('socket hang up') ||
+      msg.includes('is_from_rle') ||
+      msg.includes('Status 302') ||
+      msg.includes('Network/Proxy Error');
+
+    if (isNetworkError) {
+      console.error(`\n❌ [Network/Proxy Error] Unable to connect to Instagram servers.`);
+      console.error(`   Details: ${msg}`);
+      console.error(`   Resolution: Please verify your active VPN/Proxy (ALL_PROXY) or switch your VPN server location.\n`);
+    } else {
+      console.error(`\n❌ Error: ${msg}\n`);
+    }
     process.exit(1);
   }
 }

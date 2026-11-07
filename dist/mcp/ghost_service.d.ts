@@ -28,7 +28,7 @@ export interface GhostPostItem {
     media_type: string;
     media_product_type?: string;
     caption: string;
-    timestamp: string;
+    timestamp?: string;
     like_count: number;
     comment_count: number;
     video_play_count?: number;
@@ -52,7 +52,7 @@ export interface GhostMediaMetricsResult {
     shortcode: string;
     media_type: string;
     caption: string;
-    timestamp: string;
+    timestamp?: string;
     metrics: {
         video_plays?: number;
         video_views?: number;
@@ -63,6 +63,7 @@ export interface GhostMediaMetricsResult {
         reach?: number;
         impressions?: number;
         engagement_rate: number;
+        comment_to_like_ratio?: number;
     };
     retention?: {
         avg_watch_time_seconds?: number;
@@ -160,7 +161,7 @@ export declare class GhostService {
             id: string;
             username: string;
             text: string;
-            timestamp: string;
+            timestamp?: string;
             like_count: number;
         }>;
     }>;

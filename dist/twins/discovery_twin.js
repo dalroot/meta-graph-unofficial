@@ -128,11 +128,31 @@ export class DiscoveryTwin {
             }
         }
         // 2. Pure live execution: Zero hardcoded mock fallback
+        if (this.offlineMode) {
+            return {
+                users: [],
+                hashtags: [],
+                rank_token: rankToken,
+                status: 'offline_mode',
+                total_items: 0,
+                raw_items: []
+            };
+        }
+        if (!this.deviceTwin.hasActiveSession()) {
+            return {
+                users: [],
+                hashtags: [],
+                rank_token: rankToken,
+                status: 'auth_required',
+                total_items: 0,
+                raw_items: []
+            };
+        }
         return {
             users: [],
             hashtags: [],
             rank_token: rankToken,
-            status: 'ok',
+            status: 'empty_result',
             total_items: 0,
             raw_items: []
         };
@@ -198,7 +218,7 @@ export class DiscoveryTwin {
             }
         }
         // 2. Pure live execution: Zero hardcoded mock fallback
-        // If live exploration failed or returned no items, rawItems remains empty.
+        // If live exploration failed, is offline, or returned no items, rawItems remains empty.
         // 3. Transform and calculate viral & controversy metrics
         const posts = [];
         for (const item of rawItems) {
