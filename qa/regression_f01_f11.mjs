@@ -31,7 +31,11 @@ class MockTransport {
   }
   async request(url, _opts) {
     this.calls.push(url);
-    for (const [prefix, resp] of Object.entries(this._responses)) {
+    // Prefer the most specific URL fixture to avoid overlapping matches.
+    const fixtures = Object.entries(this._responses)
+      .sort(([a], [b]) => b.length - a.length);
+
+    for (const [prefix, resp] of fixtures) {
       if (url.includes(prefix)) return resp;
     }
     // Default: network unreachable (simulates offline/blocked)
@@ -189,32 +193,55 @@ async function testF01_ErrorPropagation() {
   }
 }
 
-// F02: Cursor-based pagination — cursor param must appear in outbound URL
+// F02: Unsupported pagination must fail explicitly, not silently repeat page one
 async function testF02_CursorPagination() {
-  // This is a code-level finding: params.cursor is never appended to the SSR URL.
-  // Verify by reading dist/mcp/ghost_service.js and checking for cursor in URL
-  const distJs = fs.readFileSync(
-    path.join(__dirname, '..', 'dist', 'mcp', 'ghost_service.js'), 'utf-8'
-  );
+  const svc = await makeService({
+    'instagram.com/testuser/': {
+      status: 200,
+      data: '<html></html>',
+      headers: {}
+    }
+  });
 
-  // Look for cursor being used in URL construction (would look like `?max_id=` or `cursor` param)
-  const hasCursorInUrl = /\$\{.*cursor.*\}/.test(distJs) || distJs.includes('max_id') ||
-    /url.*cursor|cursor.*url/i.test(distJs.slice(distJs.indexOf('getTimelinePosts'), distJs.indexOf('getTimelinePosts') + 3000));
+  const profile = {
+    id: '99',
+    username: 'testuser',
+    followers_count: 1000,
+    following_count: 100,
+    media_count: 50
+  };
 
-  // Even if cursor is passed to function, check it's NOT used in the HTTP call
-  const fnStart = distJs.indexOf('getTimelinePosts');
-  const fnBody = distJs.slice(fnStart, fnStart + 4000);
-  const cursorInUrl = fnBody.includes('params.cursor') && (fnBody.includes('max_id') || fnBody.includes('after='));
+  try {
+    await svc.getTimelinePosts({
+      username: 'testuser',
+      profile,
+      cursor: 'NEXT_PAGE_CURSOR'
+    });
 
-  if (cursorInUrl) {
-    record('F02', 'Cursor parameter used in pagination URL', 'PASS',
-      'params.cursor is included in the outbound HTTP request URL');
-  } else {
-    record('F02', 'Cursor parameter used in pagination URL', 'FAIL',
-      'params.cursor is accepted by getTimelinePosts but never sent in the HTTP URL. ' +
-      'Instagram SSR does not support cursor-based pagination via guest web — ' +
-      'server can only return the first page (~12 posts). This limitation must be documented.',
-      { cursorInUrl, fnBodySnippet: fnBody.slice(0, 400) });
+    record(
+      'F02',
+      'Unsupported cursor rejected explicitly',
+      'FAIL',
+      'Cursor was silently ignored; first page may be returned again.'
+    );
+  } catch (e) {
+    const message = String(e.message || e);
+
+    if (/cursor|pagination|unsupported/i.test(message)) {
+      record(
+        'F02',
+        'Unsupported cursor rejected explicitly',
+        'PASS',
+        message
+      );
+    } else {
+      record(
+        'F02',
+        'Unsupported cursor rejected explicitly',
+        'FAIL',
+        'Unexpected error: ' + message
+      );
+    }
   }
 }
 
@@ -289,21 +316,12 @@ async function testF04_EngagementRateImagePost() {
   const likes = result?.metrics?.likes ?? 0;
   const comments = result?.metrics?.comments ?? 0;
 
-  // If image post has likes/comments, engagement_rate of 0 is suspicious
-  if (likes > 0 && comments > 0 && er === 0) {
-    record('F04', 'Engagement rate not silently 0 for image posts', 'FAIL',
-      `Image post has ${likes} likes + ${comments} comments but engagement_rate=0. ` +
-      'Formula is view-based only; image posts always receive engagement_rate=0. ' +
-      'This should be documented or use a follower-based fallback.',
-      { likes, comments, engagement_rate: er });
-  } else if (er > 0) {
-    record('F04', 'Engagement rate not silently 0 for image posts', 'PASS',
-      `engagement_rate=${er} for image post with ${likes} likes`);
+  if (likes === 1000 && comments === 50 && er === null) {
+    record('F04', 'Image engagement rate unavailable without views', 'PASS',
+      'Image post retains likes/comments and returns null when views are unavailable.');
   } else {
-    // Ambiguous: 0 engagement might be legit if no likes/comments parsed
-    record('F04', 'Engagement rate not silently 0 for image posts', 'FAIL',
-      `engagement_rate=${er}, likes=${likes}, comments=${comments}. ` +
-      'Image engagement rate formula produces 0 — requires documentation.',
+    record('F04', 'Image engagement rate unavailable without views', 'FAIL',
+      `Expected likes=1000, comments=50, engagement_rate=null; got likes=${likes}, comments=${comments}, engagement_rate=${er}`,
       { result });
   }
 }
@@ -906,5 +924,5 @@ const reportPath = path.join(RESULTS_DIR, 'regression_f01_f11.json');
 fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
 console.log(`\nReport saved: ${reportPath}`);
 
-process.exitCode = fail > 0 ? 1 : 0;
+process.exitCode = (fail > 0 || blocked > 0) ? 1 : 0;
 

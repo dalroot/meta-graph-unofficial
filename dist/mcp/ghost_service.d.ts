@@ -62,7 +62,7 @@ export interface GhostMediaMetricsResult {
         saves?: number;
         reach?: number;
         impressions?: number;
-        engagement_rate: number;
+        engagement_rate: number | null;
         comment_to_like_ratio?: number;
     };
     retention?: {

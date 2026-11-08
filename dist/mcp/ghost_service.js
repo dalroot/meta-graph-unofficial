@@ -160,6 +160,9 @@ export class GhostService {
      * Extracts up to 12 initial posts directly from the guest SSR payload without any account.
      */
     async getTimelinePosts(params) {
+        if (params.cursor) {
+            throw new Error('Ghost Mode pagination is unsupported: Instagram guest SSR does not provide a verified cursor-based next-page endpoint.');
+        }
         const cleanUsername = (params.username || '').replace(/^@/, '').trim();
         let profile = params.profile || null;
         if (!profile && cleanUsername) {
@@ -352,9 +355,9 @@ export class GhostService {
             }
         }
         const commentToLikeRatio = likes > 0 ? Number((comments / likes).toFixed(4)) : undefined;
-        const engRate = videoPlays && videoPlays > 0
+        const engRate = videoPlays !== undefined && videoPlays > 0
             ? Number((((likes + comments) / videoPlays) * 100).toFixed(2))
-            : 0;
+            : null;
         return {
             media_id: cleanId,
             shortcode: cleanId,

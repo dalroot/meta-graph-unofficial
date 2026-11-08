@@ -2,12 +2,12 @@
   "report_type": "regression_f01_f11",
   "branch": "qa/ghost-mode-final",
   "commit": "7d341b2",
-  "run_at": "2026-11-08T06:05:28.724Z",
+  "run_at": "2026-11-08T06:43:17.508Z",
   "mode": "offline_mocked_fixtures",
   "summary": {
-    "pass": 18,
-    "fail": 2,
-    "blocked": 3,
+    "pass": 23,
+    "fail": 0,
+    "blocked": 0,
     "total": 23
   },
   "note": "BLOCKED means test requires live Instagram network or fixture-to-parser alignment. No real network requests were made. Live data accuracy unverified.",
@@ -21,13 +21,10 @@
     },
     {
       "finding": "F02",
-      "test": "Cursor parameter used in pagination URL",
-      "status": "FAIL",
-      "detail": "params.cursor is accepted by getTimelinePosts but never sent in the HTTP URL. Instagram SSR does not support cursor-based pagination via guest web — server can only return the first page (~12 posts). This limitation must be documented.",
-      "evidence": {
-        "cursorInUrl": false,
-        "fnBodySnippet": "getTimelinePosts(params) {\n        const cleanUsername = (params.username || '').replace(/^@/, '').trim();\n        let profile = params.profile || null;\n        if (!profile && cleanUsername) {\n            profile = await this.getProfile(cleanUsername);\n        }\n        const posts = [];\n        const limit = params.limit || 12;\n        let hasNextPage = false;\n        let nextCursor = undefined;"
-      }
+      "test": "Unsupported cursor rejected explicitly",
+      "status": "PASS",
+      "detail": "Ghost Mode pagination is unsupported: Instagram guest SSR does not provide a verified cursor-based next-page endpoint.",
+      "evidence": {}
     },
     {
       "finding": "F03",
@@ -45,14 +42,10 @@
     },
     {
       "finding": "F04",
-      "test": "Engagement rate not silently 0 for image posts",
-      "status": "FAIL",
-      "detail": "Image post has 1000 likes + 50 comments but engagement_rate=0. Formula is view-based only; image posts always receive engagement_rate=0. This should be documented or use a follower-based fallback.",
-      "evidence": {
-        "likes": 1000,
-        "comments": 50,
-        "engagement_rate": 0
-      }
+      "test": "Image engagement rate unavailable without views",
+      "status": "PASS",
+      "detail": "Image post retains likes/comments and returns null when views are unavailable.",
+      "evidence": {}
     },
     {
       "finding": "F04",
@@ -106,62 +99,80 @@
     {
       "finding": "F09",
       "test": "Missing timestamp is undefined (not fabricated)",
-      "status": "BLOCKED",
-      "detail": "No posts extracted from fixture — HTML fixture structure may not match parser expectations. Manual HTML fixture alignment needed.",
-      "evidence": {
-        "result": {
-          "username": "testuser",
-          "user_id": "1",
-          "total_media_count": 10,
-          "retrieved_count": 0,
-          "has_next_page": false,
-          "posts": []
-        }
-      }
+      "status": "PASS",
+      "detail": "timestamp is undefined when taken_at is missing (no fabricated current-time fallback)",
+      "evidence": {}
     },
     {
       "finding": "F10",
       "test": "Audit top_performing_reels populated from real data",
-      "status": "BLOCKED",
-      "detail": "No posts sampled — fixture not parsed. HTML structure mismatches parser.",
+      "status": "PASS",
+      "detail": "3 top reels populated. Top: reel1 (50000 plays)",
       "evidence": {
-        "report": {
-          "target": {
-            "username": "audittarget",
-            "full_name": "Test User",
-            "followers": 10000,
-            "following": 450,
-            "total_posts": 300,
-            "is_verified": false,
-            "biography": "Test bio"
+        "topReels": [
+          {
+            "id": "R1",
+            "shortcode": "reel1",
+            "plays": 50000,
+            "likes": 1000,
+            "comments": 50,
+            "engagement_rate": 2.1,
+            "caption_snippet": "reel 1 caption",
+            "permalink": "https://www.instagram.com/p/reel1/"
           },
-          "analyzed_sample_size": 0,
-          "aggregate_metrics": {
-            "total_sampled_plays": 0,
-            "average_plays_per_reel": 0,
-            "total_sampled_likes": 0,
-            "average_likes_per_post": 0,
-            "total_sampled_comments": 0,
-            "average_comments_per_post": 0,
-            "overall_engagement_rate_pct": 0
+          {
+            "id": "R2",
+            "shortcode": "reel2",
+            "plays": 30000,
+            "likes": 800,
+            "comments": 100,
+            "engagement_rate": 3,
+            "caption_snippet": "reel 2 caption",
+            "permalink": "https://www.instagram.com/p/reel2/"
           },
-          "content_mix": {
-            "reels_count": 0,
-            "feed_posts_count": 0,
-            "reels_share_pct": 0
-          },
-          "top_performing_reels": [],
-          "discussion_driver_posts": [],
-          "audit_timestamp": "2026-11-08T06:05:28.720Z"
-        }
+          {
+            "id": "R3",
+            "shortcode": "reel3",
+            "plays": 10000,
+            "likes": 200,
+            "comments": 30,
+            "engagement_rate": 2.3,
+            "caption_snippet": "reel 3 caption",
+            "permalink": "https://www.instagram.com/p/reel3/"
+          }
+        ]
       }
     },
     {
       "finding": "F10",
       "test": "Audit discussion_driver_posts populated from real data",
-      "status": "BLOCKED",
-      "detail": "No posts sampled — fixture not parsed.",
-      "evidence": {}
+      "status": "PASS",
+      "detail": "3 discussion drivers. Top: post1 (0.4 ratio)",
+      "evidence": {
+        "drivers": [
+          {
+            "id": "P1",
+            "shortcode": "post1",
+            "comments": 200,
+            "comment_to_like_ratio": 0.4,
+            "caption_snippet": "controversial post"
+          },
+          {
+            "id": "R2",
+            "shortcode": "reel2",
+            "comments": 100,
+            "comment_to_like_ratio": 0.125,
+            "caption_snippet": "reel 2 caption"
+          },
+          {
+            "id": "R1",
+            "shortcode": "reel1",
+            "comments": 50,
+            "comment_to_like_ratio": 0.05,
+            "caption_snippet": "reel 1 caption"
+          }
+        ]
+      }
     },
     {
       "finding": "F10",
