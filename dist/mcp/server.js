@@ -3,7 +3,7 @@
  * Meta Graph Unofficial - Ghost Mode MCP Server
  *
  * Standards-compliant Model Context Protocol (MCP) tool provider.
- * Exposes 100% anonymous, read-only Instagram intelligence tools to AI agents.
+ * Exposes experimental, read-only public Instagram data tools to AI agents.
  *
  * Complies with Meta Graph API v21.0 specs, Xiaomi Redmi Note 13 4G telemetry,
  * and zero-footprint Ghost Mode constraints.
@@ -42,7 +42,7 @@ const GHOST_TOOLS = [
     },
     {
         name: 'ghost_get_posts',
-        description: 'Extract feed posts, reels, and carousels of an account with full pagination in Ghost Mode. Includes media type, captions, timestamps, likes, comments, video play counts, and pagination cursor for deep scrolling.',
+        description: 'Extract available first-page feed posts and reels in Ghost Mode. Cursor-based pagination is not supported; supplying a cursor returns an explicit error. Includes available media types, captions, timestamps, likes, comments, and video play counts.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -60,7 +60,7 @@ const GHOST_TOOLS = [
                 },
                 cursor: {
                     type: 'string',
-                    description: 'Pagination token (after/max_id cursor) for fetching the next page of posts'
+                    description: 'Unsupported in Ghost Mode; providing a non-empty cursor returns an explicit error.'
                 },
                 feedType: {
                     type: 'string',
@@ -72,7 +72,7 @@ const GHOST_TOOLS = [
     },
     {
         name: 'ghost_get_media_metrics',
-        description: 'Get granular metrics and view counts for a specific reel or post anonymously. Returns video plays, views, likes, comments, shares, saves, retention drop-off estimates, and calculated engagement rate.',
+        description: 'Extract available public metrics for a reel or post anonymously. Returns available video plays, likes, and comments. View-based engagement_rate is null when a positive play count is unavailable; shares, saves, reach, and retention are not guaranteed.',
         inputSchema: {
             type: 'object',
             properties: {

@@ -1,0 +1,239 @@
+{
+  "report_type": "regression_f01_f11",
+  "branch": "qa/ghost-mode-final",
+  "commit": "7d341b2",
+  "run_at": "2026-11-08T06:43:17.508Z",
+  "mode": "offline_mocked_fixtures",
+  "summary": {
+    "pass": 23,
+    "fail": 0,
+    "blocked": 0,
+    "total": 23
+  },
+  "note": "BLOCKED means test requires live Instagram network or fixture-to-parser alignment. No real network requests were made. Live data accuracy unverified.",
+  "results": [
+    {
+      "finding": "F01",
+      "test": "Timeline network error propagates (not swallowed)",
+      "status": "PASS",
+      "detail": "getTimelinePosts threw: MOCK_NETWORK_ERROR: no fixture for https://www.instagram.com/errtest/",
+      "evidence": {}
+    },
+    {
+      "finding": "F02",
+      "test": "Unsupported cursor rejected explicitly",
+      "status": "PASS",
+      "detail": "Ghost Mode pagination is unsupported: Instagram guest SSR does not provide a verified cursor-based next-page endpoint.",
+      "evidence": {}
+    },
+    {
+      "finding": "F03",
+      "test": "Media metrics network error propagates",
+      "status": "PASS",
+      "detail": "getMediaMetrics threw: MOCK_NETWORK_ERROR: no fixture for https://www.instagram.com/reel/TESTSHORTCODE/",
+      "evidence": {}
+    },
+    {
+      "finding": "F03",
+      "test": "Media metrics 302 challenge propagates as error",
+      "status": "PASS",
+      "detail": "HTTP 302 resulted in thrown error: Instagram Guest Challenge (Status 302 - is_from_rle): Instagram web requires login for this IP. Switch VPN location/serv",
+      "evidence": {}
+    },
+    {
+      "finding": "F04",
+      "test": "Image engagement rate unavailable without views",
+      "status": "PASS",
+      "detail": "Image post retains likes/comments and returns null when views are unavailable.",
+      "evidence": {}
+    },
+    {
+      "finding": "F04",
+      "test": "Video engagement rate calculation correct",
+      "status": "PASS",
+      "detail": "engagement_rate=5.2 matches expected 5.2",
+      "evidence": {}
+    },
+    {
+      "finding": "F05",
+      "test": "Image post reported as IMAGE not VIDEO",
+      "status": "PASS",
+      "detail": "media_type=IMAGE correctly detected from is_video:false fixture",
+      "evidence": {}
+    },
+    {
+      "finding": "F05",
+      "test": "Video post detected as VIDEO",
+      "status": "PASS",
+      "detail": "media_type=VIDEO correctly detected",
+      "evidence": {}
+    },
+    {
+      "finding": "F06",
+      "test": "Comment fetch network error propagates",
+      "status": "PASS",
+      "detail": "getComments threw: MOCK_NETWORK_ERROR: no fixture for https://www.instagram.com/reel/NONETWORKCODE/",
+      "evidence": {}
+    },
+    {
+      "finding": "F06",
+      "test": "Comment 302 login challenge propagates",
+      "status": "PASS",
+      "detail": "302 threw correctly",
+      "evidence": {}
+    },
+    {
+      "finding": "F07",
+      "test": "Offline search throws descriptive error (not ok/empty)",
+      "status": "PASS",
+      "detail": "Threw: Search is unavailable in offline mode.",
+      "evidence": {}
+    },
+    {
+      "finding": "F08",
+      "test": "Offline viral explore throws descriptive error (not empty array)",
+      "status": "PASS",
+      "detail": "Threw: Viral explore is unavailable in offline mode.",
+      "evidence": {}
+    },
+    {
+      "finding": "F09",
+      "test": "Missing timestamp is undefined (not fabricated)",
+      "status": "PASS",
+      "detail": "timestamp is undefined when taken_at is missing (no fabricated current-time fallback)",
+      "evidence": {}
+    },
+    {
+      "finding": "F10",
+      "test": "Audit top_performing_reels populated from real data",
+      "status": "PASS",
+      "detail": "3 top reels populated. Top: reel1 (50000 plays)",
+      "evidence": {
+        "topReels": [
+          {
+            "id": "R1",
+            "shortcode": "reel1",
+            "plays": 50000,
+            "likes": 1000,
+            "comments": 50,
+            "engagement_rate": 2.1,
+            "caption_snippet": "reel 1 caption",
+            "permalink": "https://www.instagram.com/p/reel1/"
+          },
+          {
+            "id": "R2",
+            "shortcode": "reel2",
+            "plays": 30000,
+            "likes": 800,
+            "comments": 100,
+            "engagement_rate": 3,
+            "caption_snippet": "reel 2 caption",
+            "permalink": "https://www.instagram.com/p/reel2/"
+          },
+          {
+            "id": "R3",
+            "shortcode": "reel3",
+            "plays": 10000,
+            "likes": 200,
+            "comments": 30,
+            "engagement_rate": 2.3,
+            "caption_snippet": "reel 3 caption",
+            "permalink": "https://www.instagram.com/p/reel3/"
+          }
+        ]
+      }
+    },
+    {
+      "finding": "F10",
+      "test": "Audit discussion_driver_posts populated from real data",
+      "status": "PASS",
+      "detail": "3 discussion drivers. Top: post1 (0.4 ratio)",
+      "evidence": {
+        "drivers": [
+          {
+            "id": "P1",
+            "shortcode": "post1",
+            "comments": 200,
+            "comment_to_like_ratio": 0.4,
+            "caption_snippet": "controversial post"
+          },
+          {
+            "id": "R2",
+            "shortcode": "reel2",
+            "comments": 100,
+            "comment_to_like_ratio": 0.125,
+            "caption_snippet": "reel 2 caption"
+          },
+          {
+            "id": "R1",
+            "shortcode": "reel1",
+            "comments": 50,
+            "comment_to_like_ratio": 0.05,
+            "caption_snippet": "reel 1 caption"
+          }
+        ]
+      }
+    },
+    {
+      "finding": "F10",
+      "test": "Audit engagement_rate is 0 when no posts sampled",
+      "status": "PASS",
+      "detail": "engagement_rate_pct=0 and analyzed_sample_size=0 are consistent",
+      "evidence": {}
+    },
+    {
+      "finding": "F11",
+      "test": "feedType=reels filter applied before limit",
+      "status": "PASS",
+      "detail": "Retrieved 2 reels (limit=2) from mixed feed of 3 images + 2 reels. Filter correctly applied before limit.",
+      "evidence": {
+        "shortcodes": [
+          "reel1",
+          "reel2"
+        ]
+      }
+    },
+    {
+      "finding": "F11",
+      "test": "feedType=posts returns only non-video",
+      "status": "PASS",
+      "detail": "2 IMAGE posts returned, no VIDEO. Filter correct.",
+      "evidence": {}
+    },
+    {
+      "finding": "PARSE",
+      "test": "parseCount: 1.2M followers",
+      "status": "PASS",
+      "detail": "1.2M → 1200000",
+      "evidence": {}
+    },
+    {
+      "finding": "PARSE",
+      "test": "parseCount: 12.5K followers",
+      "status": "PASS",
+      "detail": "12.5K → 12500",
+      "evidence": {}
+    },
+    {
+      "finding": "PARSE",
+      "test": "parseCount: 1,231 followers",
+      "status": "PASS",
+      "detail": "1,231 → 1231",
+      "evidence": {}
+    },
+    {
+      "finding": "PARSE",
+      "test": "parseCount: 0 followers (legit zero)",
+      "status": "PASS",
+      "detail": "0 → 0",
+      "evidence": {}
+    },
+    {
+      "finding": "SCHEMA",
+      "test": "Comment parsing from fixture HTML",
+      "status": "PASS",
+      "detail": "2 comments parsed with correct text and username",
+      "evidence": {}
+    }
+  ]
+}

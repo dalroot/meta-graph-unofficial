@@ -301,15 +301,15 @@ curl "http://localhost:3000/v21.0/me?fields=id,username" -H "Authorization: Bear
 
 ## Model Context Protocol (MCP) & Agent Skill (Ghost Mode)
 
-MetaGraph Unofficial includes a production-ready **MCP Server** and accompanying **Agent Skill** (`instagram-ghost-analyst`) that enables any AI agent (Claude Desktop, Antigravity, Cursor, or custom LLM frameworks) to inspect, paginate, and audit any Instagram profile in **100% anonymous Ghost Mode** without browser automation, credentials, or footprint.
+MetaGraph Unofficial includes an experimental **MCP Server** and accompanying **Agent Skill** (`instagram-ghost-analyst`) for analyzing publicly accessible Instagram profile data. Ghost Mode attempts read-only, credential-free access without browser automation. Availability depends on Instagram's public responses and access restrictions. Cursor-based pagination is not supported, and anonymous access is not guaranteed. Live integration remains unverified.
 
 ### 1. Ready-to-Use Ghost Mode MCP Tools
 
 | MCP Tool Name | Description | Parameters |
 | :--- | :--- | :--- |
 | `ghost_get_profile` | Anonymously fetch profile bio, follower count, following count, total media, and HD avatar. | `username` |
-| `ghost_get_posts` | Deep timeline pagination of reels, carousels, and feed posts with play counts, likes, and comments. | `username`, `limit`, `cursor`, `feedType` |
-| `ghost_get_media_metrics` | Extract granular reel play counts (`video_play_count`), reach, and retention curves. | `mediaId` (shortcode or ID) |
+| `ghost_get_posts` | Extract available first-page reels and feed posts with likes, comments, and available play counts. Cursor pagination is unsupported. | `username`, `limit`, `cursor`, `feedType` |
+| `ghost_get_media_metrics` | Extract available public media metrics. View-based engagement rate is `null` without a positive play count; reach and retention are not guaranteed. | `mediaId` (shortcode or ID) |
 | `ghost_get_comments` | Harvest public comments with usernames, timestamps, and like counts. | `mediaId`, `limit` |
 | `ghost_search` | Search users and hashtags without leaving search history traces. | `query`, `type` |
 | `ghost_explore_viral` | Monitor viral Explore posts ranked by controversy score and comment ratio. | `limit`, `minCommentRatio` |

@@ -76,7 +76,7 @@ export interface GhostMediaMetricsResult {
     saves?: number;
     reach?: number;
     impressions?: number;
-    engagement_rate: number;
+    engagement_rate: number | null;
     comment_to_like_ratio?: number;
   };
   retention?: {
@@ -300,6 +300,12 @@ export class GhostService {
     feedType?: 'all' | 'reels' | 'posts';
     profile?: GhostProfileResult;
   }): Promise<GhostTimelineResult> {
+    if (params.cursor) {
+      throw new Error(
+        'Ghost Mode pagination is unsupported: Instagram guest SSR does not provide a verified cursor-based next-page endpoint.'
+      );
+    }
+
     const cleanUsername = (params.username || '').replace(/^@/, '').trim();
     let profile: GhostProfileResult | null = params.profile || null;
     
@@ -493,9 +499,9 @@ export class GhostService {
     }
 
     const commentToLikeRatio = likes > 0 ? Number((comments / likes).toFixed(4)) : undefined;
-    const engRate = videoPlays && videoPlays > 0
+    const engRate = videoPlays !== undefined && videoPlays > 0
       ? Number((((likes + comments) / videoPlays) * 100).toFixed(2))
-      : 0;
+      : null;
 
     return {
       media_id: cleanId,
