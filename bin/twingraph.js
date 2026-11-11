@@ -171,7 +171,7 @@ async function run() {
                 const m = mediaId.match(/(?:\/p\/|\/reel\/)([a-zA-Z0-9_-]+)/);
                 if (m) mediaId = m[1];
               }
-              const res = await tg.getMediaInsights(mediaId);
+              const res = await ghost.getMediaMetrics(mediaId);
               process.stdout.write(JSON.stringify(res, null, 2) + '\n');
             } else {
               const res = await tg.dashboard.getOverview(parsedArgs.period || '30d');
