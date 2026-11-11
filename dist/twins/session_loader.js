@@ -9,6 +9,8 @@
  * 4. Automatic canonical mobile cookie header generation
  */
 import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
 import * as crypto from 'node:crypto';
 /**
  * Parses a standard HTTP cookie string into key-value pairs
@@ -168,13 +170,20 @@ export function parseMobileSession(input) {
  * Loads a mobile session from a filepath, raw cookie string, or JSON string.
  */
 export function loadMobileSession(filePathOrRaw) {
-    if (fs.existsSync(filePathOrRaw)) {
+    let targetPath = filePathOrRaw;
+    if (!fs.existsSync(targetPath)) {
+        const homeFallback = path.join(os.homedir(), 'instagram_session.json');
+        if ((targetPath.endsWith('instagram_session.json') || targetPath === 'instagram_session.json') && fs.existsSync(homeFallback)) {
+            targetPath = homeFallback;
+        }
+    }
+    if (fs.existsSync(targetPath)) {
         try {
-            const content = fs.readFileSync(filePathOrRaw, 'utf-8');
+            const content = fs.readFileSync(targetPath, 'utf-8');
             return parseMobileSession(content);
         }
         catch (err) {
-            throw new Error(`Failed to load mobile session file from ${filePathOrRaw}: ${err.message}`);
+            throw new Error(`Failed to load mobile session file from ${targetPath}: ${err.message}`);
         }
     }
     // Treat directly as raw content

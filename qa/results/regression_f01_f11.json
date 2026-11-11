@@ -2,7 +2,7 @@
   "report_type": "regression_f01_f11",
   "branch": "qa/ghost-mode-final",
   "commit": "7d341b2",
-  "run_at": "2026-11-08T06:43:17.508Z",
+  "run_at": "2026-11-11T17:19:48.649Z",
   "mode": "offline_mocked_fixtures",
   "summary": {
     "pass": 23,

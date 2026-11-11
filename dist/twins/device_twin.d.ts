@@ -8,6 +8,7 @@
 import { DeviceFingerprint, SessionTokens } from '../types/graph.js';
 import { MobileDeviceProfile } from '../profiles/index.js';
 import { MobileSession } from './session_loader.js';
+export declare function getDefaultSessionPath(): string;
 export declare const DEFAULT_SESSION_PATH: string;
 export declare const IG_SIGNING_KEY = "6dc344682cc5cd2496191b26cc065e8c1b97bfb9cf1ad982798e2ee4e9d56262";
 export declare const IG_APP_ID_MOBILE = "1217981644879628";

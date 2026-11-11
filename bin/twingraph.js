@@ -67,6 +67,7 @@ Commands:
   search    <query>               Search users and hashtags anonymously
   viral     [limit]               Scan explore feed for viral posts
   audit     <username> [samples]  Full analytical audit (engagement, avg views, top reels)
+  login                           Launch browser to log in & auto-extract cookies to instagram_session.json
   test-mcp  [username]            Run full MCP JSON-RPC protocol test via stdio
   mcp                             Start the standard MCP stdio server
 
@@ -149,6 +150,14 @@ async function run() {
         console.log(`\n📈 [TwinGraph] Running automated audit for @${arg1} (samples: ${count})...`);
         const res = await ghost.auditAccount(arg1, count);
         console.log(JSON.stringify(res, null, 2));
+        break;
+      }
+
+      case 'login': {
+        const { runBrowserLogin } = await import(path.join(projectRoot, 'dist/auth/browser_login.js'));
+        await runBrowserLogin({
+          outputPath: path.resolve(process.cwd(), 'instagram_session.json')
+        });
         break;
       }
 

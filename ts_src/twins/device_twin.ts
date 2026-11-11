@@ -8,6 +8,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as os from 'node:os';
 import * as crypto from 'node:crypto';
 import { DeviceFingerprint, SessionTokens } from '../types/graph.js';
 import { TwinProfileRegistry, MobileDeviceProfile } from '../profiles/index.js';
@@ -18,7 +19,15 @@ import {
   formatMobileCookie
 } from './session_loader.js';
 
-export const DEFAULT_SESSION_PATH = path.resolve(process.cwd(), 'instagram_session.json');
+export function getDefaultSessionPath(): string {
+  const localPath = path.resolve(process.cwd(), 'instagram_session.json');
+  if (fs.existsSync(localPath)) return localPath;
+  const homePath = path.join(os.homedir(), 'instagram_session.json');
+  if (fs.existsSync(homePath)) return homePath;
+  return localPath;
+}
+
+export const DEFAULT_SESSION_PATH = getDefaultSessionPath();
 export const IG_SIGNING_KEY = '6dc344682cc5cd2496191b26cc065e8c1b97bfb9cf1ad982798e2ee4e9d56262';
 export const IG_APP_ID_MOBILE = '1217981644879628';
 export const IG_APP_ID_WEB = '936619743392459';
