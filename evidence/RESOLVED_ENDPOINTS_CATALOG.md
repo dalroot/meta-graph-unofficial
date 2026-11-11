@@ -798,6 +798,74 @@
 
 ---
 
+### 1.30 Web Direct Inbox & Conversation Threads Query (`PolarisDirectInboxQuery`)
+- **Official Meta Graph API v21.0 Mapping:** `GET /v21.0/{user-id}/conversations`
+- **Live Endpoint:** `POST https://www.instagram.com/api/graphql`
+- **HTTP Method:** `POST`
+- **Ground-Truth Source:** Authentic Web REA Trace `scratch/rea_web_direct_trace.json` (Line 182, verified live execution on account `19835089130`).
+- **Query Friendly Name:** `PolarisDirectInboxQuery`
+- **Query Doc ID:** `27909866362025854`
+- **Required Headers:**
+  * `User-Agent`: Chrome 130 Linux / Windows desktop
+  * `X-IG-App-ID`: `936619743392459`
+  * `X-FB-Friendly-Name`: `PolarisDirectInboxQuery`
+  * `Referer`: `https://www.instagram.com/direct/inbox/`
+  * `Content-Type`: `application/x-www-form-urlencoded`
+  * `Cookie`: `sessionid`, `ds_user_id`, `csrftoken`, `mid`, `ig_did`, `datr`
+- **Required Body Parameters:**
+  * `av`: `ds_user_id` (e.g. `19835089130`)
+  * `__d`: `www`
+  * `__user`: `0`
+  * `__a`: `1`
+  * `fb_dtsg`: Client anti-CSRF token (auto-harvested by `ensureWebTokens()`)
+  * `jazoest`: Ephemeral security token (auto-computed)
+  * `lsd`: Ephemeral security token
+  * `fb_api_caller_class`: `RelayModern`
+  * `fb_api_req_friendly_name`: `PolarisDirectInboxQuery`
+  * `server_timestamps`: `true`
+  * `doc_id`: `27909866362025854`
+  * `variables`:
+    ```json
+    {
+      "device_id_for_iris_subscription": "<ig_did_or_device_id>",
+      "__relay_internal__pv__IGDIsProfessionalAccountGKrelayprovider": true,
+      "__relay_internal__pv__IGDPinnedThreadsRenderEnabledGKrelayprovider": true,
+      "__relay_internal__pv__IGDMaxUnreadMessagesCountrelayprovider": 10,
+      "__relay_internal__pv__IGDThreadListActionsEnabledGKrelayprovider": true
+    }
+    ```
+- **Response Schema & Parsing:**
+  * Root path: `data.get_slide_mailbox_for_iris_subscription.threads_by_folder.edges[].node.as_ig_direct_thread`
+  * Sample Output:
+    ```json
+    {
+      "data": [
+        {
+          "id": "1444865887083144",
+          "updated_time": "2026-11-11T19:20:47.003Z",
+          "unread_count": 0,
+          "participants": {
+            "data": [
+              {
+                "id": "74538407011",
+                "username": "elephant.035421",
+                "name": "elephant.035421"
+              }
+            ]
+          },
+          "snippet": "این تست پلاگین هست"
+        }
+      ]
+    }
+    ```
+- **SDK Methods:** `tg.web.getConversations({ limit })` -> maps to `instagram_get_inbox` in Hermes Agent plugin.
+- **Live Output Citation:** HTTP 200 OK (Thread 1444865887083144 with `@elephant.035421`, Thread 1389369099945203 with `@rayan_music20`, Thread 1162222476160421 with `@barnamenevisiinsta`, Thread 2102378287099186 with `@tawanatallks`).
+- **Safe Rate-Limit Guidance:** 1 request per 10.0s - 20.0s. Max 60 requests/hour.
+- **Status:** ✅ VERIFIED & RESOLVED
+
+---
+
+
 ### 1.30 Authentic Web Direct Message Send Mutation (`IGDirectTextSendMutation`)
 - **Official Meta Graph API v21.0 Mapping:** `POST /v21.0/{conversation-id}/messages`
 - **Live Endpoint:** `POST https://www.instagram.com/api/graphql`

@@ -92,6 +92,162 @@ async function run() {
 
   try {
     switch (command.toLowerCase()) {
+      case 'call': {
+        const toolName = arg1;
+        const rawPayload = arg2 || '{}';
+        let parsedArgs = {};
+        try {
+          parsedArgs = JSON.parse(rawPayload);
+        } catch (e) {
+          throw new Error(`Invalid JSON arguments payload: ${rawPayload}`);
+        }
+
+        switch (toolName) {
+          case 'instagram_get_profile':
+          case 'ghost_get_profile': {
+            const username = parsedArgs.username;
+            if (!username) throw new Error('Argument "username" is required.');
+            const res = await ghost.getProfile(username);
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          case 'instagram_get_posts':
+          case 'ghost_get_posts': {
+            const username = parsedArgs.username;
+            if (!username) throw new Error('Argument "username" is required.');
+            const res = await ghost.getTimelinePosts({
+              username,
+              limit: parsedArgs.limit ? Number(parsedArgs.limit) : 12,
+              feedType: parsedArgs.feed_type || parsedArgs.feedType,
+            });
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          case 'instagram_get_media_metrics':
+          case 'ghost_get_media_metrics': {
+            const mediaId = parsedArgs.media_id || parsedArgs.mediaId;
+            if (!mediaId) throw new Error('Argument "media_id" is required.');
+            const res = await ghost.getMediaMetrics(mediaId);
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          case 'instagram_get_comments':
+          case 'ghost_get_comments': {
+            const mediaId = parsedArgs.media_id || parsedArgs.mediaId;
+            if (!mediaId) throw new Error('Argument "media_id" is required.');
+            const res = await ghost.getComments(mediaId, parsedArgs.limit ? Number(parsedArgs.limit) : 25);
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          case 'instagram_search':
+          case 'ghost_search': {
+            const query = parsedArgs.query;
+            if (!query) throw new Error('Argument "query" is required.');
+            const res = await ghost.search(query, parsedArgs.search_type || parsedArgs.type || 'all');
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          case 'instagram_audit_account':
+          case 'ghost_audit_account': {
+            const username = parsedArgs.username;
+            if (!username) throw new Error('Argument "username" is required.');
+            const res = await ghost.auditAccount(username, parsedArgs.sample_count ? Number(parsedArgs.sample_count) : 15);
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          case 'instagram_get_insights': {
+            const { TwinGraph } = await import(path.join(projectRoot, 'dist/index.js'));
+            const tg = new TwinGraph({ offlineMode: false });
+            const metricType = parsedArgs.metric_type || 'overview';
+            if (metricType === 'media') {
+              const res = await tg.dashboard.getMediaInsights(parsedArgs.media_id);
+              process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            } else {
+              const res = await tg.dashboard.getAccountOverview(parsedArgs.period || '30d');
+              process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            }
+            break;
+          }
+
+          case 'instagram_get_inbox': {
+            const { TwinGraph } = await import(path.join(projectRoot, 'dist/index.js'));
+            const tg = new TwinGraph({ offlineMode: false });
+            let res;
+            try {
+              res = await tg.web.getConversations();
+            } catch (webErr) {
+              res = await tg.direct.getConversations();
+            }
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          case 'instagram_send_message': {
+            const { TwinGraph } = await import(path.join(projectRoot, 'dist/index.js'));
+            const tg = new TwinGraph({ offlineMode: false });
+            let target = parsedArgs.recipient_id;
+            // If recipient is a username, auto-resolve to numeric PK
+            if (!/^\d+$/.test(target)) {
+              const cleanUser = target.replace(/^@/, '').trim().toLowerCase();
+              const searchRes = await ghost.search(cleanUser, 'users');
+              const foundUser = searchRes.users?.find((u) => u.username.toLowerCase() === cleanUser);
+              if (foundUser?.id) {
+                target = foundUser.id;
+              }
+            }
+            const res = await tg.web.sendDirectMessage(target, parsedArgs.text);
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          case 'instagram_post_comment': {
+            const { TwinGraph } = await import(path.join(projectRoot, 'dist/index.js'));
+            const tg = new TwinGraph({ offlineMode: false });
+            let rawMedia = String(parsedArgs.media_id || '').trim();
+            let shortcode = '';
+            if (rawMedia.includes('/p/') || rawMedia.includes('/reel/')) {
+              const m = rawMedia.match(/(?:\/p\/|\/reel\/)([a-zA-Z0-9_-]+)/);
+              if (m) shortcode = m[1];
+            } else if (!/^\d+$/.test(rawMedia)) {
+              shortcode = rawMedia.replace(/^POLARIS_/, '');
+            }
+
+            let mediaId = rawMedia;
+            if (rawMedia.includes('/p/') || rawMedia.includes('/reel/')) {
+              const m = rawMedia.match(/(?:\/p\/|\/reel\/)([a-zA-Z0-9_-]+)/);
+              if (m) mediaId = m[1];
+            }
+            if (mediaId.startsWith('POLARIS_')) {
+              mediaId = mediaId.replace('POLARIS_', '');
+            }
+            if (!/^\d+$/.test(mediaId)) {
+              const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+              let numId = 0n;
+              for (let i = 0; i < mediaId.length; i++) {
+                const idx = alphabet.indexOf(mediaId[i]);
+                if (idx !== -1) {
+                  numId = numId * 64n + BigInt(idx);
+                }
+              }
+              mediaId = numId.toString();
+            }
+            const res = await tg.web.postComment(mediaId, parsedArgs.text, { shortcode });
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          default:
+            throw new Error(`Unknown TwinGraph tool: "${toolName}"`);
+        }
+        break;
+      }
+
       case 'profile': {
         if (!arg1) throw new Error('Please specify a username. Example: twingraph profile instagram');
         console.log(`\n🔍 [TwinGraph] Inspecting profile: @${arg1}...`);

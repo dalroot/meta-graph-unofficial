@@ -22,21 +22,21 @@ export class WebTwin {
         if (fs.existsSync(sessionPath)) {
             try {
                 const raw = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
-                const tokens = raw.key_tokens || {};
+                const tokens = raw.key_tokens || raw;
                 return {
                     username: raw.username || '',
                     full_name: raw.full_name || '',
                     ds_user_id: raw.ds_user_id || tokens.ds_user_id || '',
                     cookie_string: raw.cookie_string || '',
-                    csrftoken: tokens.csrftoken,
-                    sessionid: tokens.sessionid,
-                    mid: tokens.mid,
-                    ig_did: tokens.ig_did,
-                    datr: tokens.datr,
-                    rur: tokens.rur,
-                    fb_dtsg: tokens.fb_dtsg,
-                    lsd: tokens.lsd,
-                    jazoest: tokens.jazoest
+                    csrftoken: tokens.csrftoken || raw.csrftoken,
+                    sessionid: tokens.sessionid || raw.sessionid,
+                    mid: tokens.mid || raw.mid,
+                    ig_did: tokens.ig_did || raw.ig_did,
+                    datr: tokens.datr || raw.datr,
+                    rur: tokens.rur || raw.rur,
+                    fb_dtsg: tokens.fb_dtsg || raw.fb_dtsg,
+                    lsd: tokens.lsd || raw.lsd,
+                    jazoest: tokens.jazoest || raw.jazoest
                 };
             }
             catch {
@@ -111,6 +111,7 @@ export class WebTwin {
      * Endpoint: POST https://www.instagram.com/api/graphql
      */
     async postComment(mediaId, message, options = {}) {
+        await this.ensureWebTokens();
         const text = message ? message.trim() : '';
         if (!text) {
             throw new Error('Comment message cannot be empty.');
@@ -338,19 +339,41 @@ export class WebTwin {
         }
         throw new Error(`IGDThreadDetailQuery on thread ${threadFbid} returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
     }
+    async ensureWebTokens() {
+        if (this.session.fb_dtsg && this.session.jazoest)
+            return;
+        const res = await this.transport.request('https://www.instagram.com/', {
+            headers: this.getWebHeaders('https://www.instagram.com/')
+        });
+        const dtsgMatch = res.data.match(/"DTSGInitialData",\[\],\{"token":"([^"]+)"/);
+        if (dtsgMatch) {
+            this.session.fb_dtsg = dtsgMatch[1];
+            let sum = 0;
+            for (let i = 0; i < this.session.fb_dtsg.length; i++) {
+                sum += this.session.fb_dtsg.charCodeAt(i);
+            }
+            this.session.jazoest = `2${sum}`;
+        }
+        const lsdMatch = res.data.match(/"LSD",\[\],\{"token":"([^"]+)"/);
+        if (lsdMatch) {
+            this.session.lsd = lsdMatch[1];
+        }
+    }
     /**
-     * Sends a direct text message to a conversation thread via official Web RelayModern GraphQL
+     * Sends a direct text message to a conversation thread or recipient via official Web RelayModern GraphQL
      * Query: IGDirectTextSendMutation (doc_id: 26911679871773184)
      * Endpoint: POST https://www.instagram.com/api/graphql
      */
-    async sendDirectMessage(threadFbid, text) {
+    async sendDirectMessage(targetId, text) {
+        await this.ensureWebTokens();
         const message = text ? text.trim() : '';
         if (!message) {
             throw new Error('Direct message text cannot be empty.');
         }
         const directUrl = 'https://www.instagram.com/api/graphql';
         const docId = '26911679871773184';
-        const referer = `https://www.instagram.com/direct/t/${threadFbid}/`;
+        const isThread = targetId.startsWith('th_');
+        const referer = isThread ? `https://www.instagram.com/direct/t/${targetId}/` : 'https://www.instagram.com/direct/inbox/';
         const headers = this.getWebHeaders(referer);
         headers['Content-Type'] = 'application/x-www-form-urlencoded';
         headers['x-fb-friendly-name'] = 'IGDirectTextSendMutation';
@@ -362,9 +385,7 @@ export class WebTwin {
         const randomSuffix = Math.floor(Math.random() * 900000 + 100000);
         const offlineThreadingId = `${Date.now()}${randomSuffix}`;
         const variables = {
-            ig_thread_igid: threadFbid,
             offline_threading_id: offlineThreadingId,
-            recipient_igids: null,
             replied_to_client_context: null,
             replied_to_item_id: null,
             reply_to_message_id: null,
@@ -377,8 +398,16 @@ export class WebTwin {
             commands: null,
             forwarded_from_thread_id: null,
             is_forwarded_from_own_message: null,
-            send_attribution: 'igd_web_chat_tab:in_thread'
+            send_attribution: isThread ? 'igd_web_chat_tab:in_thread' : 'direct_thread'
         };
+        if (isThread) {
+            variables.ig_thread_igid = targetId;
+            variables.recipient_igids = null;
+        }
+        else {
+            variables.ig_thread_igid = null;
+            variables.recipient_igids = [targetId];
+        }
         const params = new URLSearchParams();
         params.set('av', this.session.ds_user_id || '17841419713919386');
         params.set('__d', 'www');
@@ -419,7 +448,7 @@ export class WebTwin {
             if (sendResponse?.message_id) {
                 return {
                     message_id: sendResponse.message_id,
-                    thread_id: threadFbid,
+                    thread_id: targetId,
                     timestamp: sendResponse.timestamp_ms ? Number(sendResponse.timestamp_ms) : Date.now(),
                     status: 'ok'
                 };
@@ -429,6 +458,83 @@ export class WebTwin {
             }
             throw new Error(`IGDirectTextSendMutation unexpected response shape: ${res.data.slice(0, 300)}`);
         }
-        throw new Error(`IGDirectTextSendMutation on thread ${threadFbid} returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
+        throw new Error(`IGDirectTextSendMutation on target ${targetId} returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
+    }
+    /**
+     * Retrieves conversations from the direct inbox via official Web RelayModern GraphQL endpoint
+     * Conforms to official Meta Graph API v21.0 format: GET /{user-id}/conversations
+     */
+    async getConversations(options = {}) {
+        await this.ensureWebTokens();
+        const params = new URLSearchParams();
+        params.set('av', this.session.ds_user_id || '19835089130');
+        params.set('__d', 'www');
+        params.set('__user', '0');
+        params.set('__a', '1');
+        if (this.session.fb_dtsg)
+            params.set('fb_dtsg', this.session.fb_dtsg);
+        if (this.session.jazoest)
+            params.set('jazoest', this.session.jazoest);
+        if (this.session.lsd)
+            params.set('lsd', this.session.lsd);
+        params.set('fb_api_caller_class', 'RelayModern');
+        params.set('fb_api_req_friendly_name', 'PolarisDirectInboxQuery');
+        params.set('server_timestamps', 'true');
+        params.set('doc_id', '27909866362025854');
+        const variables = {
+            device_id_for_iris_subscription: this.session.ig_did || '7A5EF1EB-ABF2-4DBC-A319-0B9D61B199B8',
+            __relay_internal__pv__IGDIsProfessionalAccountGKrelayprovider: true,
+            __relay_internal__pv__IGDPinnedThreadsRenderEnabledGKrelayprovider: true,
+            __relay_internal__pv__IGDMaxUnreadMessagesCountrelayprovider: options.limit || 10,
+            __relay_internal__pv__IGDThreadListActionsEnabledGKrelayprovider: true
+        };
+        params.set('variables', JSON.stringify(variables));
+        const headers = this.getWebHeaders('https://www.instagram.com/direct/inbox/');
+        headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        headers['x-fb-friendly-name'] = 'PolarisDirectInboxQuery';
+        const res = await this.transport.request('https://www.instagram.com/api/graphql', {
+            method: 'POST',
+            headers,
+            body: params.toString(),
+            timeoutMs: 25000
+        });
+        if (res.status === 200) {
+            try {
+                const parsed = JSON.parse(res.data);
+                const edges = parsed.data?.get_slide_mailbox_for_iris_subscription?.threads_by_folder?.edges || [];
+                const conversations = [];
+                for (const edge of edges) {
+                    const th = edge.node?.as_ig_direct_thread;
+                    if (!th)
+                        continue;
+                    const threadId = String(th.thread_fbid || th.id || th.thread_id || '');
+                    const participants = (th.users || []).map((u) => ({
+                        id: String(u.id || u.pk || ''),
+                        username: u.username || 'unknown',
+                        name: u.full_name || u.name
+                    }));
+                    const messages = th.slide_messages?.edges || [];
+                    const lastMsg = messages[0]?.node || {};
+                    let updatedTime = new Date().toISOString();
+                    if (th.last_activity_timestamp_ms) {
+                        updatedTime = new Date(Number(th.last_activity_timestamp_ms)).toISOString();
+                    }
+                    conversations.push({
+                        id: threadId,
+                        updated_time: updatedTime,
+                        unread_count: th.marked_as_unread ? 1 : 0,
+                        participants: { data: participants },
+                        snippet: lastMsg.text_body || lastMsg.igd_snippet || ''
+                    });
+                    if (options.limit && conversations.length >= options.limit)
+                        break;
+                }
+                return { data: conversations };
+            }
+            catch (err) {
+                throw new Error(`Failed to parse PolarisDirectInboxQuery response: ${err.message}`);
+            }
+        }
+        throw new Error(`Web Direct Inbox returned HTTP ${res.status}: ${res.data.slice(0, 200)}`);
     }
 }

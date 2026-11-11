@@ -65,10 +65,20 @@ export declare class WebTwin {
     getThreadMessages(threadFbid: string, options?: {
         limit?: number;
     }): Promise<GraphConversation>;
+    ensureWebTokens(): Promise<void>;
     /**
-     * Sends a direct text message to a conversation thread via official Web RelayModern GraphQL
+     * Sends a direct text message to a conversation thread or recipient via official Web RelayModern GraphQL
      * Query: IGDirectTextSendMutation (doc_id: 26911679871773184)
      * Endpoint: POST https://www.instagram.com/api/graphql
      */
-    sendDirectMessage(threadFbid: string, text: string): Promise<DirectSendMessageResponse>;
+    sendDirectMessage(targetId: string, text: string): Promise<DirectSendMessageResponse>;
+    /**
+     * Retrieves conversations from the direct inbox via official Web RelayModern GraphQL endpoint
+     * Conforms to official Meta Graph API v21.0 format: GET /{user-id}/conversations
+     */
+    getConversations(options?: {
+        limit?: number;
+    }): Promise<{
+        data: GraphConversation[];
+    }>;
 }
