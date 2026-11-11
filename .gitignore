@@ -21,3 +21,4 @@ data/
 *.db
 .chrome_windows_profile/
 HANDOFF.md
+plugins/

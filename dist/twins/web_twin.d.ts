@@ -81,4 +81,34 @@ export declare class WebTwin {
     }): Promise<{
         data: GraphConversation[];
     }>;
+    /**
+     * Publishes a story photo live to Instagram
+     * Step 1: POST https://www.instagram.com/rupload_igphoto/{upload_id}
+     * Step 2: POST https://www.instagram.com/api/v1/media/configure_to_story/
+     */
+    publishStory(imageInput: string | Buffer): Promise<{
+        id: string;
+        media_id: string;
+        fbid: string;
+        is_reel_media: boolean;
+        expiring_at: number;
+        status: string;
+        raw?: any;
+    }>;
+    /**
+     * Publishes a feed photo live to Instagram
+     * Step 1: POST https://www.instagram.com/rupload_igphoto/{upload_id}
+     * Step 2: POST https://www.instagram.com/api/v1/media/configure/
+     */
+    publishFeedPost(params: {
+        imageInput: string | Buffer;
+        caption?: string;
+    }): Promise<{
+        id: string;
+        media_id: string;
+        fbid: string;
+        status: string;
+        shortcode?: string;
+        raw?: any;
+    }>;
 }

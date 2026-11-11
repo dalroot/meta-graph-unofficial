@@ -27,7 +27,7 @@ export class TwinTransport {
         }
         const headers = { ...(options.headers || {}) };
         if (options.body && !headers['Content-Length'] && !headers['content-length']) {
-            headers['Content-Length'] = Buffer.byteLength(options.body, 'utf-8').toString();
+            headers['Content-Length'] = (Buffer.isBuffer(options.body) ? options.body.length : Buffer.byteLength(options.body, 'utf-8')).toString();
         }
         return new Promise((resolve, reject) => {
             const req = https.request({
@@ -92,7 +92,7 @@ export class TwinTransport {
         const timeout = options.timeoutMs || 30000;
         const headers = { ...(options.headers || {}) };
         if (options.body && !headers['Content-Length'] && !headers['content-length']) {
-            headers['Content-Length'] = Buffer.byteLength(options.body, 'utf-8').toString();
+            headers['Content-Length'] = (Buffer.isBuffer(options.body) ? options.body.length : Buffer.byteLength(options.body, 'utf-8')).toString();
         }
         return new Promise((resolve, reject) => {
             const req = client.request({

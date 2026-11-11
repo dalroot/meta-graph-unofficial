@@ -418,19 +418,8 @@ export class MediaTwin {
             }
             throw new Error(`Mobile Media Comment on ${cleanMediaId} returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
         }
-        // Offline synthesized comment
-        return {
-            id: `comment_${Date.now()}_${idempotenceToken.slice(0, 8)}`,
-            text,
-            timestamp: new Date().toISOString(),
-            like_count: 0,
-            from: {
-                id: this.deviceTwin.getUserId(),
-                username: this.deviceTwin.getUsername(),
-                name: this.deviceTwin.getFullName()
-            },
-            status: 'ok'
-        };
+        // Fail closed: zero mock comments
+        throw new Error('Active authenticated session is required to publish comments; offline synthetic execution is disabled.');
     }
     /**
      * Retrieves comments on a media object

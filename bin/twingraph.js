@@ -67,6 +67,8 @@ Commands:
   search    <query>               Search users and hashtags anonymously
   viral     [limit]               Scan explore feed for viral posts
   audit     <username> [samples]  Full analytical audit (engagement, avg views, top reels)
+  publish-post  <caption> [image] Publish photo/feed post
+  publish-story [image/video]     Publish story with hardware codec checks
   login                           Launch browser to log in & auto-extract cookies to instagram_session.json
   test-mcp  [username]            Run full MCP JSON-RPC protocol test via stdio
   mcp                             Start the standard MCP stdio server
@@ -173,6 +175,14 @@ async function run() {
               }
               const res = await ghost.getMediaMetrics(mediaId);
               process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            } else if (metricType === 'content' || metricType === 'dashboard') {
+              const res = await tg.dashboard.filterContentInsights({
+                type: parsedArgs.content_type || parsedArgs.type || 'ALL',
+                sort_by: parsedArgs.sort_by || 'reach',
+                timeframe: parsedArgs.period || '30d',
+                category: parsedArgs.category
+              });
+              process.stdout.write(JSON.stringify(res, null, 2) + '\n');
             } else {
               const res = await tg.dashboard.getOverview(parsedArgs.period || '30d');
               process.stdout.write(JSON.stringify(res, null, 2) + '\n');
@@ -247,6 +257,44 @@ async function run() {
             break;
           }
 
+          case 'instagram_publish_post': {
+            const { TwinGraph } = await import(path.join(projectRoot, 'dist/index.js'));
+            const tg = new TwinGraph({ offlineMode: false });
+            const caption = parsedArgs.caption || '';
+            const imageUrl = parsedArgs.image_url || parsedArgs.imageUrl || parsedArgs.image_path || parsedArgs.imagePath;
+            let res;
+            if (tg.web.hasActiveSession() && imageUrl) {
+              res = await tg.web.publishFeedPost({ imageInput: imageUrl, caption });
+            } else {
+              res = await tg.media.publishFeedPost({
+                caption,
+                imageUrl,
+                userTags: parsedArgs.user_tags || parsedArgs.userTags,
+              });
+            }
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
+          case 'instagram_publish_story': {
+            const { TwinGraph } = await import(path.join(projectRoot, 'dist/index.js'));
+            const tg = new TwinGraph({ offlineMode: false });
+            const imageUrl = parsedArgs.image_url || parsedArgs.imageUrl || parsedArgs.image_path || parsedArgs.imagePath || path.resolve(projectRoot, 'scratch/test_story.jpg');
+            let res;
+            if (tg.web.hasActiveSession() && imageUrl) {
+              res = await tg.web.publishStory(imageUrl);
+            } else {
+              res = await tg.media.publishStory({
+                imageUrl,
+                videoUrl: parsedArgs.video_url || parsedArgs.videoUrl || parsedArgs.video_path || parsedArgs.videoPath,
+                textOverlays: parsedArgs.text_overlays || parsedArgs.textOverlays,
+                stickers: parsedArgs.stickers,
+              });
+            }
+            process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+            break;
+          }
+
           default:
             throw new Error(`Unknown TwinGraph tool: "${toolName}"`);
         }
@@ -310,6 +358,39 @@ async function run() {
         const count = arg2 ? parseInt(arg2, 10) : 10;
         console.log(`\n📈 [TwinGraph] Running automated audit for @${arg1} (samples: ${count})...`);
         const res = await ghost.auditAccount(arg1, count);
+        console.log(JSON.stringify(res, null, 2));
+        break;
+      }
+
+      case 'publish-post':
+      case 'post': {
+        const { TwinGraph } = await import(path.join(projectRoot, 'dist/index.js'));
+        const tg = new TwinGraph({ offlineMode: false });
+        const caption = arg1 || '';
+        const imageUrl = arg2 || '';
+        console.log(`\n📮 [TwinGraph] Publishing post (caption: "${caption}")...`);
+        let res;
+        if (tg.web.hasActiveSession() && imageUrl) {
+          res = await tg.web.publishFeedPost({ imageInput: imageUrl, caption });
+        } else {
+          res = await tg.media.publishFeedPost({ caption, imageUrl });
+        }
+        console.log(JSON.stringify(res, null, 2));
+        break;
+      }
+
+      case 'publish-story':
+      case 'story': {
+        const { TwinGraph } = await import(path.join(projectRoot, 'dist/index.js'));
+        const tg = new TwinGraph({ offlineMode: false });
+        const mediaUrl = arg1 || path.resolve(projectRoot, 'scratch/test_story.jpg');
+        console.log(`\n✨ [TwinGraph] Publishing story (media: "${mediaUrl}")...`);
+        let res;
+        if (tg.web.hasActiveSession()) {
+          res = await tg.web.publishStory(mediaUrl);
+        } else {
+          res = await tg.media.publishStory({ imageUrl: mediaUrl });
+        }
         console.log(JSON.stringify(res, null, 2));
         break;
       }

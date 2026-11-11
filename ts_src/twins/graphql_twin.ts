@@ -106,30 +106,8 @@ export class GraphQLTwin {
           status: 'ok',
           query: queryName,
           unseen_count: 0,
-          threads_count: 1,
-          threads: [
-            {
-              thread_id: '340282366841710300949128148901827394857',
-              thread_title: username,
-              is_group: false,
-              users: [
-                {
-                  pk: userId,
-                  username: username,
-                  full_name: this.deviceTwin.getFullName(),
-                  profile_pic_url: 'https://scontent-ams2-1.cdninstagram.com/avatar_placeholder.jpg'
-                }
-              ],
-              last_permanent_item: {
-                item_id: '1792019482910394',
-                item_type: 'text',
-                text: 'TwinGraph verified direct communication',
-                timestamp: Date.now() * 1000,
-                user_id: userId
-              },
-              unseen_count: 0
-            }
-          ]
+          threads_count: 0,
+          threads: []
         };
         break;
 
@@ -173,78 +151,21 @@ export class GraphQLTwin {
             id: targetUserId,
             username: username,
             full_name: this.deviceTwin.getFullName(),
-            biography: 'Zero-browser high-performance Meta Graph API library',
-            followers_count: 12450,
-            following_count: 89,
-            media_count: 3,
-            profile_pic_url: 'https://scontent-ams2-1.cdninstagram.com/avatar_placeholder.jpg',
-            is_verified: true,
-            is_business: true,
-            category: 'Technology / Software'
+            biography: '',
+            followers_count: 0,
+            following_count: 0,
+            media_count: 0,
+            profile_pic_url: '',
+            is_verified: false,
+            is_business: false,
+            category: ''
           },
-          pinned_post_ids: ['18092837482910293'],
+          pinned_post_ids: [],
           timeline: {
-            edges: [
-              {
-                node: {
-                  id: '18092837482910293',
-                  pk: '18092837482910293',
-                  code: 'DedDBnTCs-J',
-                  shortcode: 'DedDBnTCs-J',
-                  media_type: 2,
-                  product_type: 'clips',
-                  caption: { text: 'Meta Graph Unofficial: Pure Mobile Twin Architecture' },
-                  taken_at: Math.floor((Date.now() - 4 * 86400 * 1000) / 1000),
-                  like_count: 2410,
-                  comment_count: 184,
-                  video_play_count: 34920,
-                  is_pinned: true,
-                  image_versions2: {
-                    candidates: [{ url: 'https://instagram.com/p/DedDBnTCs-J/media/?size=t' }]
-                  }
-                }
-              },
-              {
-                node: {
-                  id: '18084729103847201',
-                  pk: '18084729103847201',
-                  code: 'DeXYZ12345',
-                  shortcode: 'DeXYZ12345',
-                  media_type: 2,
-                  product_type: 'clips',
-                  caption: { text: 'Redmi Note 13 Snapdragon 680 Hardware Codec Pipeline' },
-                  taken_at: Math.floor((Date.now() - 9 * 86400 * 1000) / 1000),
-                  like_count: 1840,
-                  comment_count: 94,
-                  video_play_count: 24580,
-                  is_pinned: false,
-                  image_versions2: {
-                    candidates: [{ url: 'https://instagram.com/p/DeXYZ12345/media/?size=t' }]
-                  }
-                }
-              },
-              {
-                node: {
-                  id: '18073829102948572',
-                  pk: '18073829102948572',
-                  code: 'DeABC67890',
-                  shortcode: 'DeABC67890',
-                  media_type: 1,
-                  product_type: 'feed',
-                  caption: { text: 'Meta Graph API v21.0 vs Mobile Telemetry Architecture Diagram' },
-                  taken_at: Math.floor((Date.now() - 11 * 86400 * 1000) / 1000),
-                  like_count: 1450,
-                  comment_count: 68,
-                  is_pinned: false,
-                  image_versions2: {
-                    candidates: [{ url: 'https://instagram.com/p/DeABC67890/media/?size=t' }]
-                  }
-                }
-              }
-            ],
+            edges: [],
             page_info: {
               has_next_page: false,
-              end_cursor: 'cursor_end_profile_timeline_3items'
+              end_cursor: null
             }
           }
         };
@@ -256,13 +177,13 @@ export class GraphQLTwin {
           status: 'ok',
           creator_destination_metadata: {
             account_id: userId,
-            account_type: 'CREATOR',
-            destination_type: 'FACEBOOK_PAGE',
-            is_destination_switch_eligible: true,
-            linked_destination_id: '122108867655496701',
-            linked_destination_name: 'TwinGraph Official Developer Page',
-            allowed_transition_destinations: ['CREATOR', 'BUSINESS'],
-            professional_conversion_status: 'ACTIVE_CREATOR'
+            account_type: 'PERSONAL',
+            destination_type: 'NONE',
+            is_destination_switch_eligible: false,
+            linked_destination_id: null,
+            linked_destination_name: null,
+            allowed_transition_destinations: [],
+            professional_conversion_status: 'INACTIVE'
           }
         };
         break;
@@ -273,36 +194,13 @@ export class GraphQLTwin {
           status: 'ok',
           subscription_eligibility: {
             account_id: userId,
-            is_eligible: true,
-            status: 'ACTIVE',
-            subscriber_count: 42,
-            active_subscribers_mrr_cents: 20958,
-            enabled_benefits: [
-              'SUBSCRIBER_BADGES',
-              'EXCLUSIVE_REELS',
-              'SUBSCRIBER_BROADCAST_CHAT',
-              'SUBSCRIBER_STORIES',
-              'EXCLUSIVE_LIVES'
-            ],
-            available_tiers: [
-              {
-                tier_id: 'TIER_1',
-                name: 'Supporter Tier',
-                price_cents: 499,
-                currency: 'USD',
-                formatted_price: '$4.99/mo',
-                benefits: ['SUBSCRIBER_BADGES', 'EXCLUSIVE_REELS']
-              },
-              {
-                tier_id: 'TIER_2',
-                name: 'VIP Developer Tier',
-                price_cents: 999,
-                currency: 'USD',
-                formatted_price: '$9.99/mo',
-                benefits: ['SUBSCRIBER_BADGES', 'EXCLUSIVE_REELS', 'SUBSCRIBER_BROADCAST_CHAT', 'SUBSCRIBER_STORIES', 'EXCLUSIVE_LIVES']
-              }
-            ],
-            onboarding_flow_completed: true
+            is_eligible: false,
+            status: 'NOT_ELIGIBLE',
+            subscriber_count: 0,
+            active_subscribers_mrr_cents: 0,
+            enabled_benefits: [],
+            available_tiers: [],
+            onboarding_flow_completed: false
           }
         };
         break;

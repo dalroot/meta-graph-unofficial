@@ -11,7 +11,7 @@ export interface TransportResponse {
 export interface TransportRequestOptions {
     method?: string;
     headers?: Record<string, string>;
-    body?: string;
+    body?: string | Buffer;
     timeoutMs?: number;
     proxyUrl?: string;
 }

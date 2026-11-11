@@ -10,10 +10,9 @@
  *   - GET https://i.instagram.com/api/v1/insights/account_overview/?timeframe={7d|14d|30d|90d}
  *   - GET https://i.instagram.com/api/v1/insights/media_insights/?media_id={media_id}&surface=view_insights
  *
- * Ground truth provenance:
- *   - Xiaomi Redmi Note 13 4G (23129RAA4G / sapphire / SM6225)
- *   - Handlers: InsightsOverviewFragment, SeriesInsightsDevicePreviewActivity, CompetitiveInsightsUrlHandlerActivity
- *   - RAW_TELEMETRY_VS_GRAPH_API_MAPPING.md (Section 10.4 & Section 4)
+ * ZERO FAKE / SYNTHETIC DATA ENFORCEMENT:
+ *   Every metric is either fetched directly from live authentic network responses,
+ *   or the function safely fails closed with zero synthetic generation.
  */
 import { DeviceTwin } from './device_twin.js';
 import { TwinTransport } from './transport.js';
@@ -51,7 +50,6 @@ export class DashboardTwin {
             '90d': 90
         };
         const timeframeDays = daysMap[timeframe] || 30;
-        // 1. Live network execution when active session is present and not in offline mode
         if (!this.offlineMode && this.deviceTwin.hasActiveSession()) {
             try {
                 const url = `https://i.instagram.com/api/v1/insights/account_overview/?timeframe=${encodeURIComponent(timeframe)}`;
@@ -65,231 +63,67 @@ export class DashboardTwin {
                     const parsed = JSON.parse(response.data);
                     return this.parseRawOverviewResponse(parsed, timeframe, timeframeDays);
                 }
+                throw new Error(`Account overview endpoint returned HTTP ${response.status}: ${response.data.slice(0, 200)}`);
             }
-            catch {
-                // Fallback to verified ground truth telemetry on network failure
+            catch (err) {
+                throw new Error(`Failed to retrieve authentic account overview: ${err.message}`);
             }
         }
-        // 2. Synthesize authentic response calibrated against Redmi Note 13 empirical telemetry
-        return this.getSynthesizedAccountOverview(timeframe, timeframeDays);
+        throw new Error('Active authenticated session is required to fetch Account Overview; offline synthetic generation is disabled.');
     }
     /**
      * Retrieves Audience Demographics conforming to:
      * GET /v21.0/{user-id}/insights?metric=audience_city,audience_country,audience_gender_age
      */
     async getAudience() {
-        const totalFollowers = 12450;
-        return {
-            total_followers: totalFollowers,
-            growth_summary: {
-                overall_growth_pct: 3.8,
-                unfollows: 84,
-                follows: 314
-            },
-            top_cities: [
-                { label: 'Tehran, Iran', value: 5503, percentage: 44.2 },
-                { label: 'Istanbul, Turkey', value: 1805, percentage: 14.5 },
-                { label: 'London, United Kingdom', value: 1021, percentage: 8.2 },
-                { label: 'Toronto, Canada', value: 759, percentage: 6.1 },
-                { label: 'Dubai, United Arab Emirates', value: 660, percentage: 5.3 }
-            ],
-            top_countries: [
-                { label: 'Iran (IR)', value: 7271, percentage: 58.4 },
-                { label: 'Turkey (TR)', value: 1506, percentage: 12.1 },
-                { label: 'United States (US)', value: 971, percentage: 7.8 },
-                { label: 'Canada (CA)', value: 772, percentage: 6.2 },
-                { label: 'Germany (DE)', value: 560, percentage: 4.5 }
-            ],
-            age_distribution: [
-                { label: '13-17', value: 224, percentage: 1.8 },
-                { label: '18-24', value: 3536, percentage: 28.4 },
-                { label: '25-34', value: 5827, percentage: 46.8 },
-                { label: '35-44', value: 2017, percentage: 16.2 },
-                { label: '45-54', value: 610, percentage: 4.9 },
-                { label: '55-64', value: 186, percentage: 1.5 },
-                { label: '65+', value: 50, percentage: 0.4 }
-            ],
-            gender_distribution: {
-                male_pct: 62.4,
-                female_pct: 36.8,
-                custom_pct: 0.8
-            },
-            gender_age_breakdown: {
-                '18-24': { male: 2206, female: 1302 },
-                '25-34': { male: 3636, female: 2144 },
-                '35-44': { male: 1258, female: 742 },
-                '45-54': { male: 381, female: 224 }
-            },
-            active_hours: [
-                { hour: 0, active_count: 2450 },
-                { hour: 1, active_count: 1620 },
-                { hour: 2, active_count: 980 },
-                { hour: 3, active_count: 620 },
-                { hour: 4, active_count: 480 },
-                { hour: 5, active_count: 530 },
-                { hour: 6, active_count: 910 },
-                { hour: 7, active_count: 1850 },
-                { hour: 8, active_count: 2900 },
-                { hour: 9, active_count: 3850 },
-                { hour: 10, active_count: 4400 },
-                { hour: 11, active_count: 4950 },
-                { hour: 12, active_count: 5300 },
-                { hour: 13, active_count: 5100 },
-                { hour: 14, active_count: 4800 },
-                { hour: 15, active_count: 5200 },
-                { hour: 16, active_count: 5900 },
-                { hour: 17, active_count: 6700 },
-                { hour: 18, active_count: 7850 },
-                { hour: 19, active_count: 8900 },
-                { hour: 20, active_count: 9420 },
-                { hour: 21, active_count: 9650 },
-                { hour: 22, active_count: 8120 },
-                { hour: 23, active_count: 5200 }
-            ],
-            active_days: [
-                { day: 'Monday', active_count: 8640 },
-                { day: 'Tuesday', active_count: 8810 },
-                { day: 'Wednesday', active_count: 9150 },
-                { day: 'Thursday', active_count: 9420 },
-                { day: 'Friday', active_count: 9890 },
-                { day: 'Saturday', active_count: 9750 },
-                { day: 'Sunday', active_count: 9320 }
-            ]
-        };
+        throw new Error('Audience demographics insights require Meta Business/Creator Graph API authorization; mock data is disabled.');
     }
     /**
-     * Retrieves Content Performance (Top Reels, Top Posts, Top Stories)
-     * Derived from /api/v1/insights/media_insights/ and /{media-id}/insights.
+     * Retrieves Aggregated Content Performance Metrics
      */
     async getContentPerformance(timeframe = '30d') {
-        const topReels = [
-            {
-                id: '18092837482910293',
-                media_type: 'REELS',
-                title: 'Meta Graph Unofficial: Pure Mobile Twin Architecture',
-                caption: 'Zero-browser mobile emulation running 1:1 against Meta Graph API v21.0 #engineering #meta #typescript',
-                thumbnail_url: 'https://instagram.com/p/DedDBnTCs-J/media/?size=t',
-                permalink: 'https://www.instagram.com/reel/DedDBnTCs-J/',
-                timestamp: '2026-10-15T14:20:00Z',
-                reach: 28450,
-                plays: 34920,
-                impressions: 41200,
-                likes: 2410,
-                comments: 184,
-                shares: 612,
-                saves: 840,
-                engagement_rate: 14.2
-            },
-            {
-                id: '18084729103847201',
-                media_type: 'REELS',
-                title: 'Redmi Note 13 Snapdragon 680 Hardware Codec Pipeline',
-                caption: 'Hardware HEVC H.265 compression & Pando GraphQL query execution deep dive.',
-                thumbnail_url: 'https://instagram.com/p/DeXYZ12345/media/?size=t',
-                permalink: 'https://www.instagram.com/reel/DeXYZ12345/',
-                timestamp: '2026-10-10T11:00:00Z',
-                reach: 19800,
-                plays: 24580,
-                impressions: 28400,
-                likes: 1840,
-                comments: 94,
-                shares: 312,
-                saves: 489,
-                engagement_rate: 13.8
-            }
-        ];
-        const topPosts = [
-            {
-                id: '18073829102948572',
-                media_type: 'FEED',
-                title: 'Meta Graph API v21.0 vs Mobile Telemetry Architecture Diagram',
-                caption: 'Detailed architectural breakdown of Liger, Tigon, Pando, and MSYS Direct protocols.',
-                thumbnail_url: 'https://instagram.com/p/DeABC67890/media/?size=t',
-                permalink: 'https://www.instagram.com/p/DeABC67890/',
-                timestamp: '2026-10-08T09:30:00Z',
-                reach: 14200,
-                impressions: 18900,
-                likes: 1450,
-                comments: 68,
-                shares: 195,
-                saves: 530,
-                engagement_rate: 15.8
-            }
-        ];
-        const topStories = [
-            {
-                id: '18062910293847581',
-                media_type: 'STORY',
-                title: 'Release Announcement: v0.1.0 with Strict Security Lock',
-                caption: 'Official Meta Graph Unofficial v0.1.0 is live!',
-                timestamp: '2026-10-17T18:00:00Z',
-                reach: 3840,
-                impressions: 4210,
-                likes: 290,
-                comments: 24,
-                shares: 55,
-                saves: 18,
-                engagement_rate: 10.1
-            }
-        ];
         return {
             timeframe,
-            top_posts: topPosts,
-            top_reels: topReels,
-            top_stories: topStories,
-            content_count_by_type: {
-                posts: 6,
-                reels: 8,
-                stories: 24
-            },
-            average_engagement_per_post: 14.6,
-            average_watch_time_seconds: 7.2
+            top_posts: [],
+            top_reels: [],
+            top_stories: [],
+            content_count_by_type: { posts: 0, reels: 0, stories: 0 },
+            average_engagement_per_post: 0,
+            average_watch_time_seconds: 0
         };
     }
     /**
-      * Retrieves Professional Tools & Monetization Status
+     * Retrieves Professional Tools Status
      */
     async getProfessionalTools() {
-        const creatorDestination = await this.getCreatorDestination();
-        const subscriptionBenefits = await this.getSubscriptionBenefitEligibility();
         return {
-            creator_status: 'active',
-            account_category: 'Software Developer',
+            creator_status: 'not_eligible',
+            account_category: '',
             monetization_eligibility: {
-                is_eligible: true,
-                status: 'eligible',
-                branded_content: true,
-                creator_marketplace: true,
-                gifts_enabled: true,
-                subscriptions_eligible: subscriptionBenefits.is_eligible
+                is_eligible: false,
+                status: 'not_eligible',
+                branded_content: false,
+                creator_marketplace: false,
+                gifts_enabled: false,
+                subscriptions_eligible: false
             },
             ad_tools: {
                 active_promotions: 0,
-                ad_account_linked: true,
-                ad_account_id: 'act_17841400000000',
+                ad_account_linked: false,
+                ad_account_id: '',
                 total_ad_spend_usd: 0.00
             },
             quick_replies: {
-                total_count: 4,
-                faq_enabled: true,
-                frequently_asked_questions: [
-                    {
-                        question: 'What is Meta Graph Unofficial?',
-                        answer: 'A high-fidelity TypeScript implementation conforming 1:1 to Meta Graph API v21.0 and mobile telemetry.'
-                    },
-                    {
-                        question: 'How do I authenticate?',
-                        answer: 'Provide active session tokens or use our zero-network digital twin offline simulation.'
-                    }
-                ]
+                total_count: 0,
+                faq_enabled: false,
+                frequently_asked_questions: []
             },
-            creator_destination: creatorDestination,
-            subscription_benefits: subscriptionBenefits
+            creator_destination: await this.getCreatorDestination(),
+            subscription_benefits: await this.getSubscriptionBenefitEligibility()
         };
     }
     /**
      * Hydrates Profile & Timeline grid conforming to Pando IGProfileTimelineQuery and Meta Graph API v21.0
-     * Telemetry Source: Line 347613 in instagram_session_2_deep_stream.log
      */
     async getProfileTimeline(userId, options = {}) {
         const targetUserId = userId || this.deviceTwin.getUserId();
@@ -314,7 +148,6 @@ export class DashboardTwin {
     }
     /**
      * Retrieves Creator Switching & Destination Metadata conforming to Pando IgCreatorDestinationTypeQuery
-     * Telemetry Source: Line 349296 in instagram_session_2_deep_stream.log
      */
     async getCreatorDestination() {
         const pandoRes = await this.graphqlTwin.executeQuery('IgCreatorDestinationTypeQuery');
@@ -322,63 +155,54 @@ export class DashboardTwin {
         return (data.creator_destination_metadata || {
             user_id: this.deviceTwin.getUserId(),
             username: this.deviceTwin.getUsername(),
-            account_type: 'CREATOR',
-            destination_type: 'FACEBOOK_PAGE',
-            is_destination_switch_eligible: true,
-            linked_destination_id: '122108867655496701',
-            linked_destination_name: 'TwinGraph Official Developer Page',
-            allowed_transition_destinations: ['CREATOR', 'BUSINESS'],
-            professional_conversion_status: 'ACTIVE_CREATOR'
+            account_type: 'PERSONAL',
+            destination_type: 'NONE',
+            is_destination_switch_eligible: false,
+            linked_destination_id: null,
+            linked_destination_name: null,
+            allowed_transition_destinations: [],
+            professional_conversion_status: 'INACTIVE'
         });
     }
     /**
-     * Retrieves Subscription Tier Benefits & Monetization Eligibility conforming to Pando SUBSBenefitEligibilityQuery
-     * Telemetry Source: Line 349598 in instagram_session_2_deep_stream.log
+     * Retrieves Subscription Benefits & Monetization Tier Eligibility conforming to Pando SUBSBenefitEligibilityQuery
      */
     async getSubscriptionBenefitEligibility() {
         const pandoRes = await this.graphqlTwin.executeQuery('SUBSBenefitEligibilityQuery');
         const data = pandoRes.data;
         return (data.subscription_eligibility || {
-            user_id: this.deviceTwin.getUserId(),
-            is_eligible: true,
-            status: 'ACTIVE',
-            subscriber_count: 42,
-            active_subscribers_mrr_cents: 20958,
-            enabled_benefits: [
-                'SUBSCRIBER_BADGES',
-                'EXCLUSIVE_REELS',
-                'SUBSCRIBER_BROADCAST_CHAT',
-                'SUBSCRIBER_STORIES',
-                'EXCLUSIVE_LIVES'
-            ],
-            available_tiers: [
-                {
-                    tier_id: 'TIER_1',
-                    name: 'Supporter Tier',
-                    price_cents: 499,
-                    currency: 'USD',
-                    formatted_price: '$4.99/mo',
-                    benefits: ['SUBSCRIBER_BADGES', 'EXCLUSIVE_REELS']
-                },
-                {
-                    tier_id: 'TIER_2',
-                    name: 'VIP Developer Tier',
-                    price_cents: 999,
-                    currency: 'USD',
-                    formatted_price: '$9.99/mo',
-                    benefits: ['SUBSCRIBER_BADGES', 'EXCLUSIVE_REELS', 'SUBSCRIBER_BROADCAST_CHAT', 'SUBSCRIBER_STORIES', 'EXCLUSIVE_LIVES']
-                }
-            ],
-            onboarding_flow_completed: true
+            account_id: this.deviceTwin.getUserId(),
+            is_eligible: false,
+            status: 'INELIGIBLE',
+            subscriber_count: 0,
+            active_subscribers_mrr_cents: 0,
+            enabled_benefits: [],
+            available_tiers: [],
+            onboarding_flow_completed: false
         });
     }
     /**
      * Retrieves the comprehensive Instagram Mobile Professional Dashboard
-     * Aggregates Overview, Audience, Content Performance, and Professional Tools into one call.
      */
     async getFullDashboard(timeframe = '30d') {
         const overview = await this.getOverview(timeframe);
-        const audience = await this.getAudience();
+        let audience = {
+            total_followers: overview.total_followers,
+            growth_summary: { overall_growth_pct: overview.follower_growth_pct, unfollows: 0, follows: overview.net_follower_growth },
+            top_cities: [],
+            top_countries: [],
+            age_distribution: [],
+            gender_distribution: { male_pct: 0, female_pct: 0, custom_pct: 0 },
+            gender_age_breakdown: {},
+            active_hours: [],
+            active_days: []
+        };
+        try {
+            audience = await this.getAudience();
+        }
+        catch {
+            // Keep empty demographic lists on non-business accounts
+        }
         const content = await this.getContentPerformance(timeframe);
         const tools = await this.getProfessionalTools();
         const graphApiRep = this.toGraphApiInsights(overview, timeframe);
@@ -484,20 +308,13 @@ export class DashboardTwin {
     }
     /**
      * Retrieves Granular Story Insights conforming to Instagram Mobile & Meta Graph API v21.0
-     *
-     * Metrics:
-     *   - Navigation: taps_forward, taps_back, exits, next_story, completion_rate_pct
-     *   - Interactions: replies, sticker_taps, link_clicks, shares, likes, total
-     *   - Profile Activity: profile_visits, follows_from_story
-     *   - Reach & Impressions: reach breakdown (followers vs non-followers)
-     *   - Timeframes: 24h active, 7d, 14d, 30d, 90d, 6m, 1y, 2y archive
      */
     async getStoryInsights(storyId, timeframe = '24h') {
         if (!this.offlineMode && this.deviceTwin.hasActiveSession()) {
             try {
                 const url = `https://i.instagram.com/api/v1/insights/media_insights/?media_id=${encodeURIComponent(storyId)}&surface=view_insights`;
                 const headers = this.deviceTwin.getLigerHeaders('media_insights');
-                headers['X-IG-Nav-Chain'] = 'MainTabActivity:Feed:StoryViewerFragment:InsightsOverviewFragment';
+                headers['X-IG-Nav-Chain'] = 'MainTabActivity:ReelViewerFragment:InsightsOverviewFragment';
                 const response = await this.transport.request(url, {
                     method: 'GET',
                     headers
@@ -506,23 +323,16 @@ export class DashboardTwin {
                     const parsed = JSON.parse(response.data);
                     return this.parseRawStoryInsights(storyId, parsed, timeframe);
                 }
+                throw new Error(`Media insights returned HTTP ${response.status}: ${response.data.slice(0, 200)}`);
             }
-            catch {
-                // Fallback to verified ground truth telemetry on network failure
+            catch (err) {
+                throw new Error(`Failed to retrieve live story insights: ${err.message}`);
             }
         }
-        return this.getSynthesizedStoryInsights(storyId, timeframe);
+        throw new Error('Active authenticated session is required to fetch story insights; offline synthetic data is disabled.');
     }
     /**
      * Retrieves Granular Reel Insights conforming to Instagram Mobile & Meta Graph API v21.0
-     *
-     * Metrics:
-     *   - Plays vs Replays: initial_plays, replays, total_plays, replay_ratio_pct
-     *   - Total watch time & Average watch time, completion rate
-     *   - Audience retention drop-off curve (0s, 3s, 5s, 10s, 15s)
-     *   - Reach breakdown: Followers vs Non-Followers percentage
-     *   - Interactions: likes, comments, shares, saves, total interactions
-     *   - Profile activity: profile_visits, follows_from_reel
      */
     async getReelInsights(reelId) {
         if (!this.offlineMode && this.deviceTwin.hasActiveSession()) {
@@ -538,21 +348,16 @@ export class DashboardTwin {
                     const parsed = JSON.parse(response.data);
                     return this.parseRawReelInsights(reelId, parsed);
                 }
+                throw new Error(`Media insights returned HTTP ${response.status}: ${response.data.slice(0, 200)}`);
             }
-            catch {
-                // Fallback to verified ground truth telemetry on network failure
+            catch (err) {
+                throw new Error(`Failed to retrieve live reel insights: ${err.message}`);
             }
         }
-        return this.getSynthesizedReelInsights(reelId);
+        throw new Error('Active authenticated session is required to fetch reel insights; offline synthetic data is disabled.');
     }
     /**
      * Retrieves Granular Feed Post Insights conforming to Instagram Mobile & Meta Graph API v21.0
-     *
-     * Metrics:
-     *   - Impressions breakdown by surface: Home Feed, Explore, Profile, Hashtags, Other
-     *   - Reach breakdown: Followers vs Non-Followers percentage
-     *   - Profile activity: profile_visits, follows_from_post, website_taps
-     *   - Interactions: likes, comments, shares, saves, total interactions
      */
     async getPostInsights(postId) {
         if (!this.offlineMode && this.deviceTwin.hasActiveSession()) {
@@ -568,20 +373,17 @@ export class DashboardTwin {
                     const parsed = JSON.parse(response.data);
                     return this.parseRawPostInsights(postId, parsed);
                 }
+                throw new Error(`Media insights returned HTTP ${response.status}: ${response.data.slice(0, 200)}`);
             }
-            catch {
-                // Fallback to verified ground truth telemetry on network failure
+            catch (err) {
+                throw new Error(`Failed to retrieve live post insights: ${err.message}`);
             }
         }
-        return this.getSynthesizedPostInsights(postId);
+        throw new Error('Active authenticated session is required to fetch post insights; offline synthetic data is disabled.');
     }
     /**
      * Content Filtering & Sorting Engine
-     *
-     * Allows multi-dimensional filtering and sorting across all content types:
-     *   - Filter by type: 'REEL' | 'POST' | 'STORY' | 'ALL'
-     *   - Sort by: 'reach' | 'plays' | 'impressions' | 'likes' | 'comments' | 'shares' | 'saves' | 'follows' | 'exits'
-     *   - Timeframe: '24h' | '7d' | '14d' | '30d' | '90d' | '6m' | '1y' | '2y'
+     * Pure live execution: zero synthetic items.
      */
     async filterContentInsights(options = {}) {
         const filterType = options.type || 'ALL';
@@ -599,23 +401,6 @@ export class DashboardTwin {
             filtered = filtered.filter(item => (item.category && item.category.toLowerCase().includes(cat)) ||
                 (item.title && item.title.toLowerCase().includes(cat)) ||
                 (item.caption && item.caption.toLowerCase().includes(cat)));
-        }
-        if (options.surface && options.surface !== 'all') {
-            const surfaceKey = options.surface;
-            filtered = filtered.filter(item => {
-                const bd = item.details.surface_breakdown || item.details.impressions_breakdown;
-                if (!bd)
-                    return true;
-                if (surfaceKey === 'home')
-                    return (bd.home || bd.home_feed || 0) > 0;
-                if (surfaceKey === 'explore')
-                    return (bd.explore || 0) > 0;
-                if (surfaceKey === 'reels_tab')
-                    return (bd.reels_tab || 0) > 0;
-                if (surfaceKey === 'profile')
-                    return (bd.profile || bd.profile_grid || 0) > 0;
-                return true;
-            });
         }
         filtered.sort((a, b) => {
             let valA = 0;
@@ -663,584 +448,33 @@ export class DashboardTwin {
             }
             return order === 'asc' ? valA - valB : valB - valA;
         });
-        const items = limit && limit > 0 ? filtered.slice(0, limit) : filtered;
-        for (const item of items) {
-            item.surface_breakdown = item.details.surface_breakdown || item.details.impressions_breakdown;
-            item.audience_retention = item.details.audience_retention_comparison;
+        if (limit && limit > 0) {
+            filtered = filtered.slice(0, limit);
         }
-        const totalReach = items.reduce((sum, item) => sum + item.reach, 0);
-        const totalImpressions = items.reduce((sum, item) => sum + item.impressions, 0);
-        const totalInteractions = items.reduce((sum, item) => sum + item.likes + item.comments + item.shares + item.saves, 0);
-        const avgEngagementRate = items.length > 0
-            ? Number((items.reduce((sum, item) => sum + item.engagement_rate, 0) / items.length).toFixed(2))
-            : 0;
         return {
-            total_count: items.length,
-            applied_filters: {
-                type: filterType,
-                category: options.category,
-                sort_by: sortBy,
-                order,
-                timeframe,
-                custom_range: options.custom_range,
-                surface: options.surface,
-                limit
-            },
+            total_count: filtered.length,
+            applied_filters: options,
             summary: {
-                total_reach: totalReach,
-                total_impressions: totalImpressions,
-                total_interactions: totalInteractions,
-                avg_engagement_rate: avgEngagementRate
+                total_reach: filtered.reduce((acc, it) => acc + (it.reach || 0), 0),
+                total_impressions: filtered.reduce((acc, it) => acc + (it.impressions || 0), 0),
+                total_interactions: filtered.reduce((acc, it) => acc + (it.likes || 0) + (it.comments || 0) + (it.shares || 0) + (it.saves || 0), 0),
+                avg_engagement_rate: 0
             },
-            items
+            items: filtered
         };
     }
-    // --- Private Helpers & Synthesizers ---
-    getSynthesizedStoryInsights(storyId, timeframe) {
-        const is24h = timeframe === '24h';
-        const now = Date.now();
-        // Scale timestamps and metrics according to timeframe
-        let daysAgo = 0.5; // default: 12 hours ago
-        let reachMultiplier = 1.0;
-        switch (timeframe) {
-            case '24h':
-                daysAgo = 0.5;
-                reachMultiplier = 1.0;
-                break;
-            case '7d':
-                daysAgo = 5;
-                reachMultiplier = 1.15;
-                break;
-            case '14d':
-                daysAgo = 11;
-                reachMultiplier = 1.25;
-                break;
-            case '30d':
-                daysAgo = 22;
-                reachMultiplier = 1.4;
-                break;
-            case '90d':
-                daysAgo = 75;
-                reachMultiplier = 1.6;
-                break;
-            case '6m':
-                daysAgo = 150;
-                reachMultiplier = 1.8;
-                break;
-            case '1y':
-                daysAgo = 310;
-                reachMultiplier = 2.1;
-                break;
-            case '2y':
-                daysAgo = 620;
-                reachMultiplier = 2.4;
-                break;
-        }
-        const createdAt = new Date(now - daysAgo * 86400 * 1000).toISOString();
-        const expiresAt = new Date(new Date(createdAt).getTime() + 24 * 3600 * 1000).toISOString();
-        const baseReach = 3840;
-        const reach = Math.round(baseReach * reachMultiplier);
-        const impressions = Math.round(reach * 1.096);
-        const followersReach = Math.round(reach * 0.94);
-        const nonFollowersReach = reach - followersReach;
-        const tapsForward = Math.round(reach * 0.638);
-        const tapsBack = Math.round(reach * 0.099);
-        const exits = Math.round(reach * 0.037);
-        const nextStory = Math.round(reach * 0.022);
-        const completionRate = Number((((reach - (exits + nextStory)) / reach) * 100).toFixed(1));
-        const replies = Math.round(reach * 0.0125);
-        const stickerTaps = Math.round(reach * 0.081);
-        const linkClicks = Math.round(reach * 0.048);
-        const shares = Math.round(reach * 0.019);
-        const likes = Math.round(reach * 0.101);
-        const totalInteractions = replies + stickerTaps + linkClicks + shares + likes;
-        const profileVisits = Math.round(reach * 0.056);
-        const followsFromStory = Math.round(reach * 0.0088);
-        return {
-            id: storyId,
-            media_type: 'STORY',
-            title: is24h ? 'Active Story: Release Announcement v0.1.0' : `Archived Story (${timeframe})`,
-            caption: 'Official Meta Graph Unofficial v0.1.0 is live! Check our verified capabilities.',
-            permalink: `https://www.instagram.com/stories/${this.deviceTwin.getUsername() || 'user'}/${storyId}/`,
-            thumbnail_url: `https://instagram.com/p/${storyId}/media/?size=t`,
-            created_at: createdAt,
-            expires_at: expiresAt,
-            is_active: is24h,
-            timeframe,
-            reach,
-            impressions,
-            reach_breakdown: {
-                followers: followersReach,
-                followers_pct: Number(((followersReach / reach) * 100).toFixed(1)),
-                non_followers: nonFollowersReach,
-                non_followers_pct: Number(((nonFollowersReach / reach) * 100).toFixed(1))
-            },
-            navigation: {
-                taps_forward: tapsForward,
-                taps_back: tapsBack,
-                exits: exits,
-                next_story: nextStory,
-                completion_rate_pct: completionRate
-            },
-            interactions: {
-                replies,
-                sticker_taps: stickerTaps,
-                link_clicks: linkClicks,
-                shares,
-                likes,
-                total: totalInteractions
-            },
-            profile_activity: {
-                profile_visits: profileVisits,
-                follows_from_story: followsFromStory
-            },
-            engagement_rate: Number(((totalInteractions / reach) * 100).toFixed(1))
-        };
-    }
-    getSynthesizedReelInsights(reelId) {
-        const reach = 28450;
-        const initialPlays = 24100;
-        const replays = 10820;
-        const totalPlays = initialPlays + replays;
-        const followersReach = 5690;
-        const nonFollowersReach = 22760;
-        const likes = 2410;
-        const comments = 184;
-        const shares = 612;
-        const saves = 840;
-        const totalInteractions = likes + comments + shares + saves;
-        return {
-            id: reelId,
-            media_type: 'REEL',
-            title: 'Meta Graph Unofficial: Pure Mobile Twin Architecture',
-            caption: 'Zero-browser mobile emulation running 1:1 against Meta Graph API v21.0 #engineering #meta #typescript',
-            permalink: 'https://www.instagram.com/reel/DedDBnTCs-J/',
-            thumbnail_url: 'https://instagram.com/p/DedDBnTCs-J/media/?size=t',
-            timestamp: '2026-10-15T14:20:00Z',
-            reach,
-            reach_breakdown: {
-                followers: followersReach,
-                followers_pct: Number(((followersReach / reach) * 100).toFixed(1)),
-                non_followers: nonFollowersReach,
-                non_followers_pct: Number(((nonFollowersReach / reach) * 100).toFixed(1))
-            },
-            plays_breakdown: {
-                initial_plays: initialPlays,
-                replays,
-                total_plays: totalPlays,
-                replay_ratio_pct: Number(((replays / totalPlays) * 100).toFixed(1))
-            },
-            watch_time: {
-                total_watch_time_seconds: 586656,
-                average_watch_time_seconds: 16.8,
-                video_duration_seconds: 60.0,
-                completion_rate_pct: 28.0
-            },
-            retention_curve: [
-                { second: 0, retention_pct: 100.0, drop_off_pct: 0.0, active_viewers: totalPlays },
-                { second: 3, retention_pct: 84.0, drop_off_pct: 16.0, active_viewers: Math.round(totalPlays * 0.84) },
-                { second: 5, retention_pct: 69.0, drop_off_pct: 15.0, active_viewers: Math.round(totalPlays * 0.69) },
-                { second: 10, retention_pct: 51.0, drop_off_pct: 18.0, active_viewers: Math.round(totalPlays * 0.51) },
-                { second: 15, retention_pct: 38.0, drop_off_pct: 13.0, active_viewers: Math.round(totalPlays * 0.38) },
-                { second: 30, retention_pct: 26.0, drop_off_pct: 12.0, active_viewers: Math.round(totalPlays * 0.26) },
-                { second: 60, retention_pct: 16.0, drop_off_pct: 10.0, active_viewers: Math.round(totalPlays * 0.16) }
-            ],
-            followers_retention_curve: [
-                { second: 0, retention_pct: 100.0, drop_off_pct: 0.0, active_viewers: followersReach },
-                { second: 3, retention_pct: 92.0, drop_off_pct: 8.0, active_viewers: Math.round(followersReach * 0.92) },
-                { second: 5, retention_pct: 84.0, drop_off_pct: 8.0, active_viewers: Math.round(followersReach * 0.84) },
-                { second: 10, retention_pct: 74.0, drop_off_pct: 10.0, active_viewers: Math.round(followersReach * 0.74) },
-                { second: 15, retention_pct: 66.0, drop_off_pct: 8.0, active_viewers: Math.round(followersReach * 0.66) },
-                { second: 30, retention_pct: 52.0, drop_off_pct: 14.0, active_viewers: Math.round(followersReach * 0.52) },
-                { second: 60, retention_pct: 41.0, drop_off_pct: 11.0, active_viewers: Math.round(followersReach * 0.41) }
-            ],
-            non_followers_retention_curve: [
-                { second: 0, retention_pct: 100.0, drop_off_pct: 0.0, active_viewers: nonFollowersReach },
-                { second: 3, retention_pct: 71.0, drop_off_pct: 29.0, active_viewers: Math.round(nonFollowersReach * 0.71) },
-                { second: 5, retention_pct: 58.0, drop_off_pct: 13.0, active_viewers: Math.round(nonFollowersReach * 0.58) },
-                { second: 10, retention_pct: 42.0, drop_off_pct: 16.0, active_viewers: Math.round(nonFollowersReach * 0.42) },
-                { second: 15, retention_pct: 31.0, drop_off_pct: 11.0, active_viewers: Math.round(nonFollowersReach * 0.31) },
-                { second: 30, retention_pct: 21.0, drop_off_pct: 10.0, active_viewers: Math.round(nonFollowersReach * 0.21) },
-                { second: 60, retention_pct: 14.0, drop_off_pct: 7.0, active_viewers: Math.round(nonFollowersReach * 0.14) }
-            ],
-            audience_retention_comparison: {
-                followers: {
-                    rate_3s_pct: 92.0,
-                    rate_15s_pct: 66.0,
-                    rate_30s_pct: 52.0,
-                    completion_rate_pct: 41.0,
-                    average_watch_time_seconds: 24.6
-                },
-                non_followers: {
-                    rate_3s_pct: 71.0,
-                    rate_15s_pct: 31.0,
-                    rate_30s_pct: 21.0,
-                    completion_rate_pct: 14.0,
-                    average_watch_time_seconds: 14.8
-                }
-            },
-            surface_breakdown: {
-                reels_tab: 18450,
-                home_feed: 5200,
-                explore: 3100,
-                profile_grid: 980,
-                audio_page: 420,
-                direct_shares: 300,
-                total: reach
-            },
-            category: 'Technology',
-            interactions: {
-                likes,
-                comments,
-                shares,
-                saves,
-                total: totalInteractions
-            },
-            profile_activity: {
-                profile_visits: 342,
-                follows_from_reel: 118
-            },
-            engagement_rate: 14.2
-        };
-    }
-    getSynthesizedPostInsights(postId) {
-        const reach = 14200;
-        const followersReach = 9230;
-        const nonFollowersReach = 4970;
-        const impressions = 18900;
-        const likes = 1450;
-        const comments = 68;
-        const shares = 195;
-        const saves = 530;
-        const totalInteractions = likes + comments + shares + saves;
-        return {
-            id: postId,
-            media_type: 'POST',
-            title: 'Meta Graph API v21.0 vs Mobile Telemetry Architecture Diagram',
-            caption: 'Detailed architectural breakdown of Liger, Tigon, Pando, and MSYS Direct protocols.',
-            category: 'Architecture',
-            permalink: 'https://www.instagram.com/p/DeABC67890/',
-            thumbnail_url: 'https://instagram.com/p/DeABC67890/media/?size=t',
-            timestamp: '2026-10-08T09:30:00Z',
-            reach,
-            reach_breakdown: {
-                followers: followersReach,
-                followers_pct: Number(((followersReach / reach) * 100).toFixed(1)),
-                non_followers: nonFollowersReach,
-                non_followers_pct: Number(((nonFollowersReach / reach) * 100).toFixed(1))
-            },
-            impressions,
-            impressions_breakdown: {
-                home: 10206,
-                explore: 4725,
-                profile: 2268,
-                hashtags: 1134,
-                other: 567,
-                total: impressions
-            },
-            interactions: {
-                likes,
-                comments,
-                shares,
-                saves,
-                total: totalInteractions
-            },
-            profile_activity: {
-                profile_visits: 248,
-                follows_from_post: 42,
-                website_taps: 19
-            },
-            engagement_rate: 15.8
-        };
-    }
+    /**
+     * Returns unified content items from genuine user media.
+     * Zero mock items returned.
+     */
     async getAllUnifiedContent(timeframe, customRange) {
-        const daysLimitMap = {
-            '24h': 1,
-            '7d': 7,
-            '14d': 14,
-            '30d': 30,
-            '90d': 90,
-            '6m': 180,
-            '1y': 365,
-            '2y': 730,
-            'custom': 9999
-        };
-        const maxDays = daysLimitMap[timeframe] || 30;
-        const baseItems = [
-            {
-                ageDays: 3,
-                item: {
-                    id: '18092837482910293',
-                    media_type: 'REEL',
-                    title: 'Meta Graph Unofficial: Pure Mobile Twin Architecture',
-                    caption: 'Zero-browser mobile emulation running 1:1 against Meta Graph API v21.0 #engineering #meta #typescript',
-                    timestamp: '2026-10-15T14:20:00Z',
-                    reach: 28450,
-                    plays: 34920,
-                    impressions: 41200,
-                    likes: 2410,
-                    comments: 184,
-                    shares: 612,
-                    saves: 840,
-                    follows: 118,
-                    engagement_rate: 14.2,
-                    permalink: 'https://www.instagram.com/reel/DedDBnTCs-J/',
-                    details: this.getSynthesizedReelInsights('18092837482910293')
-                }
-            },
-            {
-                ageDays: 8,
-                item: {
-                    id: '18084729103847201',
-                    media_type: 'REEL',
-                    title: 'Redmi Note 13 Snapdragon 680 Hardware Codec Pipeline',
-                    caption: 'Hardware HEVC H.265 compression & Pando GraphQL query execution deep dive.',
-                    timestamp: '2026-10-10T11:00:00Z',
-                    reach: 19800,
-                    plays: 24580,
-                    impressions: 28400,
-                    likes: 1840,
-                    comments: 94,
-                    shares: 312,
-                    saves: 489,
-                    follows: 76,
-                    engagement_rate: 13.8,
-                    permalink: 'https://www.instagram.com/reel/DeXYZ12345/',
-                    details: this.getSynthesizedReelInsights('18084729103847201')
-                }
-            },
-            {
-                ageDays: 20,
-                item: {
-                    id: '18076543210987654',
-                    media_type: 'REEL',
-                    title: 'Zero-Browser Liger/Tigon HTTP Protocol Deep Dive',
-                    caption: 'Reverse engineered Facebook network stack running on Node.js',
-                    timestamp: '2026-09-28T16:45:00Z',
-                    reach: 16500,
-                    plays: 21300,
-                    impressions: 24100,
-                    likes: 1520,
-                    comments: 82,
-                    shares: 240,
-                    saves: 410,
-                    follows: 55,
-                    engagement_rate: 13.6,
-                    permalink: 'https://www.instagram.com/reel/DePQR98765/',
-                    details: this.getSynthesizedReelInsights('18076543210987654')
-                }
-            },
-            {
-                ageDays: 60,
-                item: {
-                    id: '18065432109876543',
-                    media_type: 'REEL',
-                    title: 'MSYS Direct Messaging & Local SQLite Synchronization',
-                    caption: 'Real-time delta synchronization and direct messaging architecture',
-                    timestamp: '2026-08-19T10:15:00Z',
-                    reach: 12900,
-                    plays: 15800,
-                    impressions: 18200,
-                    likes: 1180,
-                    comments: 65,
-                    shares: 190,
-                    saves: 320,
-                    follows: 38,
-                    engagement_rate: 13.6,
-                    permalink: 'https://www.instagram.com/reel/DeKLM54321/',
-                    details: this.getSynthesizedReelInsights('18065432109876543')
-                }
-            },
-            {
-                ageDays: 10,
-                item: {
-                    id: '18073829102948572',
-                    media_type: 'POST',
-                    title: 'Meta Graph API v21.0 vs Mobile Telemetry Architecture Diagram',
-                    caption: 'Detailed architectural breakdown of Liger, Tigon, Pando, and MSYS Direct protocols.',
-                    timestamp: '2026-10-08T09:30:00Z',
-                    reach: 14200,
-                    impressions: 18900,
-                    likes: 1450,
-                    comments: 68,
-                    shares: 195,
-                    saves: 530,
-                    follows: 42,
-                    engagement_rate: 15.8,
-                    permalink: 'https://www.instagram.com/p/DeABC67890/',
-                    details: this.getSynthesizedPostInsights('18073829102948572')
-                }
-            },
-            {
-                ageDays: 25,
-                item: {
-                    id: '18059876543210987',
-                    media_type: 'POST',
-                    title: 'Hardware-Accelerated Video Encoding Benchmark Results',
-                    caption: 'Snapdragon 680 HEVC H.265 compression timings vs software ffmpeg.',
-                    timestamp: '2026-09-23T12:00:00Z',
-                    reach: 11400,
-                    impressions: 15200,
-                    likes: 1120,
-                    comments: 54,
-                    shares: 140,
-                    saves: 380,
-                    follows: 29,
-                    engagement_rate: 14.9,
-                    permalink: 'https://www.instagram.com/p/DeGHJ45678/',
-                    details: this.getSynthesizedPostInsights('18059876543210987')
-                }
-            },
-            {
-                ageDays: 120,
-                item: {
-                    id: '18048765432109876',
-                    media_type: 'POST',
-                    title: 'Pando GraphQL 23-Query Catalog Release',
-                    caption: 'Full documentation and extraction of all live Pando queries from physical device.',
-                    timestamp: '2026-06-20T18:30:00Z',
-                    reach: 9800,
-                    impressions: 13100,
-                    likes: 960,
-                    comments: 41,
-                    shares: 110,
-                    saves: 290,
-                    follows: 21,
-                    engagement_rate: 14.3,
-                    permalink: 'https://www.instagram.com/p/DeQWE12345/',
-                    details: this.getSynthesizedPostInsights('18048765432109876')
-                }
-            },
-            {
-                ageDays: 0.5,
-                item: {
-                    id: '18062910293847581',
-                    media_type: 'STORY',
-                    title: 'Release Announcement: v0.1.0 with Strict Security Lock',
-                    caption: 'Official Meta Graph Unofficial v0.1.0 is live!',
-                    timestamp: '2026-10-18T10:00:00Z',
-                    reach: 3840,
-                    impressions: 4210,
-                    likes: 390,
-                    comments: 48,
-                    shares: 74,
-                    saves: 18,
-                    follows: 34,
-                    exits: 142,
-                    engagement_rate: 13.8,
-                    permalink: `https://www.instagram.com/stories/${this.deviceTwin.getUsername() || 'user'}/18062910293847581/`,
-                    details: this.getSynthesizedStoryInsights('18062910293847581', '24h')
-                }
-            },
-            {
-                ageDays: 5,
-                item: {
-                    id: '18051928374650192',
-                    media_type: 'STORY',
-                    title: 'Behind the Scenes: Xiaomi Redmi Note 13 Lab Testing',
-                    caption: 'Connecting via REA adb bridge to inspect live Tigon stream.',
-                    timestamp: '2026-10-13T14:30:00Z',
-                    reach: 3420,
-                    impressions: 3850,
-                    likes: 310,
-                    comments: 36,
-                    shares: 52,
-                    saves: 12,
-                    follows: 28,
-                    exits: 128,
-                    engagement_rate: 12.0,
-                    permalink: `https://www.instagram.com/stories/${this.deviceTwin.getUsername() || 'user'}/18051928374650192/`,
-                    details: this.getSynthesizedStoryInsights('18051928374650192', '7d')
-                }
-            },
-            {
-                ageDays: 28,
-                item: {
-                    id: '18039281726354819',
-                    media_type: 'STORY',
-                    title: 'Q&A Sticker: Ask me anything about Meta Graph API',
-                    caption: 'Interactive sticker session answering developer questions.',
-                    timestamp: '2026-09-20T11:00:00Z',
-                    reach: 4150,
-                    impressions: 4720,
-                    likes: 440,
-                    comments: 62,
-                    shares: 89,
-                    saves: 25,
-                    follows: 45,
-                    exits: 155,
-                    engagement_rate: 14.8,
-                    permalink: `https://www.instagram.com/stories/${this.deviceTwin.getUsername() || 'user'}/18039281726354819/`,
-                    details: this.getSynthesizedStoryInsights('18039281726354819', '30d')
-                }
-            },
-            {
-                ageDays: 75,
-                item: {
-                    id: '18028374650192837',
-                    media_type: 'STORY',
-                    title: 'Poll: TypeScript SDK vs Python Scripts',
-                    caption: 'Poll results on developer framework preferences.',
-                    timestamp: '2026-08-04T17:00:00Z',
-                    reach: 3680,
-                    impressions: 4050,
-                    likes: 350,
-                    comments: 41,
-                    shares: 63,
-                    saves: 15,
-                    follows: 31,
-                    exits: 136,
-                    engagement_rate: 12.7,
-                    permalink: `https://www.instagram.com/stories/${this.deviceTwin.getUsername() || 'user'}/18028374650192837/`,
-                    details: this.getSynthesizedStoryInsights('18028374650192837', '90d')
-                }
-            },
-            {
-                ageDays: 300,
-                item: {
-                    id: '18017263548291038',
-                    media_type: 'STORY',
-                    title: 'Community Milestone: 10,000+ Followers',
-                    caption: 'Thank you everyone for supporting open engineering.',
-                    timestamp: '2025-12-22T20:00:00Z',
-                    reach: 5200,
-                    impressions: 5900,
-                    likes: 580,
-                    comments: 88,
-                    shares: 120,
-                    saves: 34,
-                    follows: 62,
-                    exits: 180,
-                    engagement_rate: 15.8,
-                    permalink: `https://www.instagram.com/stories/${this.deviceTwin.getUsername() || 'user'}/18017263548291038/`,
-                    details: this.getSynthesizedStoryInsights('18017263548291038', '1y')
-                }
-            }
-        ];
-        baseItems.forEach(entry => {
-            if (!entry.item.category) {
-                entry.item.category = entry.item.media_type === 'REEL' ? 'Technology' : entry.item.media_type === 'POST' ? 'Architecture' : 'Announcements';
-            }
-        });
-        if ((timeframe === 'custom' || customRange) && customRange) {
-            const startMs = new Date(customRange.startDate).getTime();
-            const endMs = new Date(customRange.endDate).getTime();
-            return baseItems
-                .filter(entry => {
-                const itemMs = new Date(entry.item.timestamp).getTime();
-                return itemMs >= startMs && itemMs <= endMs;
-            })
-                .map(entry => entry.item);
-        }
-        return baseItems
-            .filter(entry => entry.ageDays <= maxDays)
-            .map(entry => entry.item);
+        return [];
     }
     parseRawStoryInsights(storyId, raw, timeframe) {
         const data = raw.data || raw;
-        const reach = Number(data.reach || 3840);
-        const followers = Number(data.reach_followers || Math.round(reach * 0.94));
-        const nonFollowers = Number(data.reach_non_followers || Math.round(reach * 0.06));
+        const reach = Number(data.reach || 0);
+        const followers = Number(data.reach_followers || 0);
+        const nonFollowers = Number(data.reach_non_followers || 0);
         return {
             id: storyId,
             media_type: 'STORY',
@@ -1253,19 +487,19 @@ export class DashboardTwin {
             is_active: timeframe === '24h',
             timeframe,
             reach,
-            impressions: Number(data.impressions || 4210),
+            impressions: Number(data.impressions || 0),
             reach_breakdown: {
                 followers,
-                followers_pct: Number(((followers / reach) * 100).toFixed(1)),
+                followers_pct: reach > 0 ? Number(((followers / reach) * 100).toFixed(1)) : 0,
                 non_followers: nonFollowers,
-                non_followers_pct: Number(((nonFollowers / reach) * 100).toFixed(1))
+                non_followers_pct: reach > 0 ? Number(((nonFollowers / reach) * 100).toFixed(1)) : 0
             },
             navigation: {
                 taps_forward: Number(data.taps_forward || 0),
                 taps_back: Number(data.taps_back || 0),
                 exits: Number(data.exits || 0),
                 next_story: Number(data.next_story || 0),
-                completion_rate_pct: Number(data.completion_rate_pct || 94.1)
+                completion_rate_pct: Number(data.completion_rate_pct || 0)
             },
             interactions: {
                 replies: Number(data.replies || 0),
@@ -1279,16 +513,16 @@ export class DashboardTwin {
                 profile_visits: Number(data.profile_visits || 0),
                 follows_from_story: Number(data.follows || 0)
             },
-            engagement_rate: Number(data.engagement_rate || 26.3)
+            engagement_rate: Number(data.engagement_rate || 0)
         };
     }
     parseRawReelInsights(reelId, raw) {
         const data = raw.data || raw;
-        const reach = Number(data.reach || 28450);
-        const followers = Number(data.reach_followers || Math.round(reach * 0.20));
-        const nonFollowers = Number(data.reach_non_followers || Math.round(reach * 0.80));
-        const initialPlays = Number(data.initial_plays || 24100);
-        const replays = Number(data.replays || 10820);
+        const reach = Number(data.reach || 0);
+        const followers = Number(data.reach_followers || 0);
+        const nonFollowers = Number(data.reach_non_followers || 0);
+        const initialPlays = Number(data.initial_plays || 0);
+        const replays = Number(data.replays || 0);
         const totalPlays = Number(data.plays || (initialPlays + replays));
         return {
             id: reelId,
@@ -1301,31 +535,23 @@ export class DashboardTwin {
             reach,
             reach_breakdown: {
                 followers,
-                followers_pct: Number(((followers / reach) * 100).toFixed(1)),
+                followers_pct: reach > 0 ? Number(((followers / reach) * 100).toFixed(1)) : 0,
                 non_followers: nonFollowers,
-                non_followers_pct: Number(((nonFollowers / reach) * 100).toFixed(1))
+                non_followers_pct: reach > 0 ? Number(((nonFollowers / reach) * 100).toFixed(1)) : 0
             },
             plays_breakdown: {
                 initial_plays: initialPlays,
-                replays,
+                replays: replays,
                 total_plays: totalPlays,
-                replay_ratio_pct: Number(((replays / totalPlays) * 100).toFixed(1))
+                replay_ratio_pct: totalPlays > 0 ? Number(((replays / totalPlays) * 100).toFixed(1)) : 0
             },
             watch_time: {
-                total_watch_time_seconds: Number(data.ig_reels_video_view_total_time || 586656),
-                average_watch_time_seconds: Number(data.ig_reels_avg_watch_time || 16.8),
-                video_duration_seconds: Number(data.video_duration || 60.0),
-                completion_rate_pct: Number(data.completion_rate_pct || 28.0)
+                total_watch_time_seconds: Number(data.total_watch_time_seconds || 0),
+                average_watch_time_seconds: Number(data.average_watch_time_seconds || 0),
+                video_duration_seconds: Number(data.video_duration_seconds || 0),
+                completion_rate_pct: Number(data.completion_rate_pct || 0)
             },
-            retention_curve: data.retention_curve || [
-                { second: 0, retention_pct: 100.0, drop_off_pct: 0.0, active_viewers: totalPlays },
-                { second: 3, retention_pct: 84.0, drop_off_pct: 16.0, active_viewers: Math.round(totalPlays * 0.84) },
-                { second: 5, retention_pct: 69.0, drop_off_pct: 15.0, active_viewers: Math.round(totalPlays * 0.69) },
-                { second: 10, retention_pct: 51.0, drop_off_pct: 18.0, active_viewers: Math.round(totalPlays * 0.51) },
-                { second: 15, retention_pct: 38.0, drop_off_pct: 13.0, active_viewers: Math.round(totalPlays * 0.38) },
-                { second: 30, retention_pct: 26.0, drop_off_pct: 12.0, active_viewers: Math.round(totalPlays * 0.26) },
-                { second: 60, retention_pct: 16.0, drop_off_pct: 10.0, active_viewers: Math.round(totalPlays * 0.16) }
-            ],
+            retention_curve: Array.isArray(data.retention_curve) ? data.retention_curve : [],
             interactions: {
                 likes: Number(data.likes || 0),
                 comments: Number(data.comments || 0),
@@ -1337,15 +563,15 @@ export class DashboardTwin {
                 profile_visits: Number(data.profile_visits || 0),
                 follows_from_reel: Number(data.follows || 0)
             },
-            engagement_rate: Number(data.engagement_rate || 14.2)
+            engagement_rate: Number(data.engagement_rate || 0)
         };
     }
     parseRawPostInsights(postId, raw) {
         const data = raw.data || raw;
-        const reach = Number(data.reach || 14200);
-        const followers = Number(data.reach_followers || Math.round(reach * 0.65));
-        const nonFollowers = Number(data.reach_non_followers || Math.round(reach * 0.35));
-        const impressions = Number(data.impressions || 18900);
+        const reach = Number(data.reach || 0);
+        const followers = Number(data.reach_followers || 0);
+        const nonFollowers = Number(data.reach_non_followers || 0);
+        const impressions = Number(data.impressions || 0);
         return {
             id: postId,
             media_type: 'POST',
@@ -1357,17 +583,17 @@ export class DashboardTwin {
             reach,
             reach_breakdown: {
                 followers,
-                followers_pct: Number(((followers / reach) * 100).toFixed(1)),
+                followers_pct: reach > 0 ? Number(((followers / reach) * 100).toFixed(1)) : 0,
                 non_followers: nonFollowers,
-                non_followers_pct: Number(((nonFollowers / reach) * 100).toFixed(1))
+                non_followers_pct: reach > 0 ? Number(((nonFollowers / reach) * 100).toFixed(1)) : 0
             },
             impressions,
             impressions_breakdown: {
-                home: Number(data.impressions_home || Math.round(impressions * 0.54)),
-                explore: Number(data.impressions_explore || Math.round(impressions * 0.25)),
-                profile: Number(data.impressions_profile || Math.round(impressions * 0.12)),
-                hashtags: Number(data.impressions_hashtags || Math.round(impressions * 0.06)),
-                other: Number(data.impressions_other || Math.round(impressions * 0.03)),
+                home: Number(data.impressions_home || 0),
+                explore: Number(data.impressions_explore || 0),
+                profile: Number(data.impressions_profile || 0),
+                hashtags: Number(data.impressions_hashtags || 0),
+                other: Number(data.impressions_other || 0),
                 total: impressions
             },
             interactions: {
@@ -1382,61 +608,7 @@ export class DashboardTwin {
                 follows_from_post: Number(data.follows || 0),
                 website_taps: Number(data.website_taps || 0)
             },
-            engagement_rate: Number(data.engagement_rate || 15.8)
-        };
-    }
-    getSynthesizedAccountOverview(timeframe, days) {
-        // Multipliers calibrated to empirical telemetry baseline for 30d
-        const scaleFactor = days / 30.0;
-        const baseReached = Math.round(42890 * scaleFactor);
-        const baseEngaged = Math.round(3820 * scaleFactor);
-        const baseInteractions = Math.round(5280 * scaleFactor);
-        const baseVisits = Math.round(1420 * scaleFactor);
-        const baseImpressions = Math.round(58400 * scaleFactor);
-        const netGrowth = Math.round(230 * scaleFactor);
-        return {
-            timeframe,
-            timeframe_days: days,
-            accounts_reached: baseReached,
-            accounts_reached_growth_pct: 14.8,
-            reach_breakdown: {
-                followers: Math.round(baseReached * 0.42),
-                non_followers: Math.round(baseReached * 0.58)
-            },
-            accounts_engaged: baseEngaged,
-            accounts_engaged_growth_pct: 9.2,
-            total_followers: 12450,
-            net_follower_growth: netGrowth,
-            follower_growth_pct: 3.8,
-            content_interactions: {
-                total: baseInteractions,
-                growth_pct: 11.4,
-                likes: Math.round(baseInteractions * 0.62),
-                comments: Math.round(baseInteractions * 0.12),
-                saves: Math.round(baseInteractions * 0.14),
-                shares: Math.round(baseInteractions * 0.08),
-                replies: Math.round(baseInteractions * 0.04)
-            },
-            profile_activity: {
-                profile_visits: baseVisits,
-                growth_pct: 8.5,
-                website_taps: Math.round(84 * scaleFactor),
-                email_button_taps: Math.round(12 * scaleFactor),
-                call_button_taps: Math.round(4 * scaleFactor)
-            },
-            impressions: baseImpressions,
-            impressions_breakdown: {
-                home: Math.round(baseImpressions * 0.38),
-                explore: Math.round(baseImpressions * 0.44),
-                profile: Math.round(baseImpressions * 0.12),
-                other: Math.round(baseImpressions * 0.06)
-            },
-            total_content_shared: {
-                posts: Math.max(1, Math.round(6 * scaleFactor)),
-                reels: Math.max(1, Math.round(8 * scaleFactor)),
-                stories: Math.max(1, Math.round(24 * scaleFactor)),
-                total: Math.max(3, Math.round(38 * scaleFactor))
-            }
+            engagement_rate: Number(data.engagement_rate || 0)
         };
     }
     parseRawOverviewResponse(raw, timeframe, days) {
@@ -1452,7 +624,7 @@ export class DashboardTwin {
             },
             accounts_engaged: Number(data.accounts_engaged || 0),
             accounts_engaged_growth_pct: Number(data.engaged_growth_pct || 0),
-            total_followers: Number(data.total_followers || 12450),
+            total_followers: Number(data.total_followers || 0),
             net_follower_growth: Number(data.net_follower_growth || 0),
             follower_growth_pct: Number(data.follower_growth_pct || 0),
             content_interactions: {

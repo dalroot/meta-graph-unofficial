@@ -18,7 +18,7 @@ export interface TransportResponse {
 export interface TransportRequestOptions {
   method?: string;
   headers?: Record<string, string>;
-  body?: string;
+  body?: string | Buffer;
   timeoutMs?: number;
   proxyUrl?: string;
 }
@@ -50,7 +50,7 @@ export class TwinTransport {
 
     const headers = { ...(options.headers || {}) };
     if (options.body && !headers['Content-Length'] && !headers['content-length']) {
-      headers['Content-Length'] = Buffer.byteLength(options.body, 'utf-8').toString();
+      headers['Content-Length'] = (Buffer.isBuffer(options.body) ? options.body.length : Buffer.byteLength(options.body, 'utf-8')).toString();
     }
 
     return new Promise((resolve, reject) => {
@@ -125,7 +125,7 @@ export class TwinTransport {
 
     const headers = { ...(options.headers || {}) };
     if (options.body && !headers['Content-Length'] && !headers['content-length']) {
-      headers['Content-Length'] = Buffer.byteLength(options.body, 'utf-8').toString();
+      headers['Content-Length'] = (Buffer.isBuffer(options.body) ? options.body.length : Buffer.byteLength(options.body, 'utf-8')).toString();
     }
 
     return new Promise((resolve, reject) => {

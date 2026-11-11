@@ -6,6 +6,8 @@
  * Leaves zero footprint, zero story view notifications, and zero search history.
  */
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { TwinGraph } from '../twin_graph.js';
 import { TwinTransport } from '../twins/transport.js';
 import {
@@ -190,6 +192,16 @@ export class GhostService {
         'Sec-Fetch-Site': 'none'
       };
 
+      const sessionPath = process.env.INSTAGRAM_SESSION_PATH || path.resolve(process.cwd(), 'instagram_session.json');
+      if (fs.existsSync(sessionPath)) {
+        try {
+          const sess = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
+          if (sess.cookie_string) {
+            headers['Cookie'] = sess.cookie_string;
+          }
+        } catch {}
+      }
+
       const res = await this.transport.request(url, { method: 'GET', headers, timeoutMs: 25000 });
       if (res.status === 302) {
         const loc = res.headers['location'] || '';
@@ -319,17 +331,29 @@ export class GhostService {
     let nextCursor: string | undefined = undefined;
 
     const url = `https://www.instagram.com/${cleanUsername || profile?.username}/`;
+    const sessionPath = process.env.INSTAGRAM_SESSION_PATH || path.resolve(process.cwd(), 'instagram_session.json');
+    const headers: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'X-IG-App-ID': '936619743392459',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1'
+    };
+    if (fs.existsSync(sessionPath)) {
+      try {
+        const sess = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
+        if (sess.cookie_string) {
+          headers['Cookie'] = sess.cookie_string;
+        }
+      } catch {}
+    }
+
     const res = await this.transport.request(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1'
-      },
+      headers,
       timeoutMs: 30000
     });
 

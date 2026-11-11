@@ -168,36 +168,8 @@ export class DirectTwin {
       throw new Error(`Mobile Direct Inbox returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
     }
 
-    // Offline synthesized payload backed by REA telemetry
-    return {
-      status: 'ok',
-      inbox: {
-        unseen_count: 0,
-        has_older: false,
-        oldest_cursor: 'cursor_oldest_1',
-        threads: [
-          {
-            thread_id: '340282366841710300949128148901827394857',
-            thread_title: this.deviceTwin.getUsername(),
-            users: [
-              {
-                pk: this.deviceTwin.getUserId(),
-                username: this.deviceTwin.getUsername(),
-                full_name: this.deviceTwin.getFullName()
-              }
-            ],
-            last_permanent_item: {
-              item_id: '1792019482910394',
-              item_type: 'text',
-              text: 'TwinGraph verified direct communication',
-              timestamp: Date.now() * 1000,
-              user_id: this.deviceTwin.getUserId()
-            },
-            unseen_count: 0
-          }
-        ]
-      }
-    };
+    // Offline mode: Fail closed with zero mock/synthetic data
+    throw new Error('Active authenticated session is required to fetch Mobile Direct Inbox; offline synthetic execution is disabled.');
   }
 
   /**
@@ -250,28 +222,8 @@ export class DirectTwin {
       throw new Error(`Mobile Direct Thread ${threadId} returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
     }
 
-    // Offline synthesized thread
-    return {
-      thread_id: threadId,
-      thread_title: this.deviceTwin.getUsername(),
-      users: [
-        {
-          pk: this.deviceTwin.getUserId(),
-          username: this.deviceTwin.getUsername(),
-          full_name: this.deviceTwin.getFullName()
-        }
-      ],
-      items: [
-        {
-          item_id: `msg_${Date.now().toString().slice(-8)}`,
-          item_type: 'text',
-          text: 'TwinGraph direct message stream initialized',
-          timestamp: Date.now() * 1000,
-          user_id: this.deviceTwin.getUserId()
-        }
-      ],
-      unseen_count: 0
-    };
+    // Offline mode: Fail closed with zero mock/synthetic data
+    throw new Error(`Active authenticated session is required to fetch Mobile Direct Thread ${threadId}; offline synthetic execution is disabled.`);
   }
 
   /**
@@ -371,15 +323,8 @@ export class DirectTwin {
       throw new Error(`Mobile Direct Message Broadcast returned HTTP ${res.status}: ${res.data.slice(0, 300)}`);
     }
 
-    // Offline synthesized success response
-    const itemId = `1792019482910${Date.now().toString().slice(-4)}`;
-    return {
-      recipient_id: options.recipientUserId || threadId,
-      message_id: itemId,
-      thread_id: threadId,
-      status: 'ok',
-      timestamp: Date.now()
-    };
+    // Offline mode: Fail closed with zero mock/synthetic data
+    throw new Error('Active authenticated session is required to send direct messages; offline synthetic execution is disabled.');
   }
 
   /**

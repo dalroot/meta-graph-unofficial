@@ -7,6 +7,7 @@
  */
 
 import * as fs from 'node:fs';
+import * as crypto from 'node:crypto';
 import { TwinTransport } from './transport.js';
 import { WebBrowserProfile } from '../profiles/types.js';
 import { TwinProfileRegistry } from '../profiles/registry.js';
@@ -625,5 +626,201 @@ export class WebTwin {
     }
 
     throw new Error(`Web Direct Inbox returned HTTP ${res.status}: ${res.data.slice(0, 200)}`);
+  }
+
+  /**
+   * Publishes a story photo live to Instagram
+   * Step 1: POST https://www.instagram.com/rupload_igphoto/{upload_id}
+   * Step 2: POST https://www.instagram.com/api/v1/media/configure_to_story/
+   */
+  public async publishStory(imageInput: string | Buffer): Promise<{
+    id: string;
+    media_id: string;
+    fbid: string;
+    is_reel_media: boolean;
+    expiring_at: number;
+    status: string;
+    raw?: any;
+  }> {
+    if (!this.hasActiveSession()) {
+      throw new Error('Active authenticated session is required to publish story.');
+    }
+
+    let imageBuffer: Buffer;
+    if (Buffer.isBuffer(imageInput)) {
+      imageBuffer = imageInput;
+    } else if (typeof imageInput === 'string' && (imageInput.startsWith('http://') || imageInput.startsWith('https://'))) {
+      const imgRes = await this.transport.requestBuffer(imageInput);
+      imageBuffer = imgRes.data;
+    } else if (typeof imageInput === 'string' && fs.existsSync(imageInput)) {
+      imageBuffer = fs.readFileSync(imageInput);
+    } else {
+      throw new Error(`Invalid image input: file not found or unsupported URL '${imageInput}'`);
+    }
+
+    const uploadId = Date.now().toString();
+    const waterfallId = crypto.randomUUID();
+    const uploadUrl = `https://www.instagram.com/rupload_igphoto/${uploadId}`;
+    const baseHeaders = this.getWebHeaders('https://www.instagram.com/');
+
+    const ruploadParams = JSON.stringify({
+      upload_id: uploadId,
+      media_type: 1
+    });
+
+    const uploadHeaders: Record<string, string> = {
+      ...baseHeaders,
+      'X_FB_PHOTO_WATERFALL_ID': waterfallId,
+      'X-Entity-Type': 'image/jpeg',
+      'X-Entity-Name': `${uploadId}.jpg`,
+      'X-Entity-Length': imageBuffer.length.toString(),
+      'Offset': '0',
+      'Content-Type': 'image/jpeg',
+      'X-Instagram-Rupload-Params': ruploadParams
+    };
+
+    const uploadRes = await this.transport.request(uploadUrl, {
+      method: 'POST',
+      headers: uploadHeaders,
+      body: imageBuffer,
+      timeoutMs: 35000
+    });
+
+    if (uploadRes.status !== 200) {
+      throw new Error(`Upload step failed with HTTP ${uploadRes.status}: ${uploadRes.data.slice(0, 200)}`);
+    }
+
+    const configureUrl = 'https://www.instagram.com/api/v1/media/configure_to_story/';
+    const configurePayload = new URLSearchParams({
+      upload_id: uploadId,
+      source_type: 'library',
+      configure_mode: '1'
+    }).toString();
+
+    const configureHeaders = {
+      ...this.getWebHeaders('https://www.instagram.com/'),
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    };
+
+    const configRes = await this.transport.request(configureUrl, {
+      method: 'POST',
+      headers: configureHeaders,
+      body: configurePayload,
+      timeoutMs: 35000
+    });
+
+    if (configRes.status !== 200) {
+      throw new Error(`Configure step failed with HTTP ${configRes.status}: ${configRes.data.slice(0, 200)}`);
+    }
+
+    const parsed = JSON.parse(configRes.data);
+    const mediaObj = parsed.media || {};
+    return {
+      id: String(mediaObj.id || parsed.media_id || uploadId),
+      media_id: String(mediaObj.id || parsed.media_id || uploadId),
+      fbid: String(mediaObj.fbid || uploadId),
+      is_reel_media: true,
+      expiring_at: mediaObj.expiring_at || Math.floor(Date.now() / 1000) + 86400,
+      status: parsed.status || 'ok',
+      raw: mediaObj
+    };
+  }
+
+  /**
+   * Publishes a feed photo live to Instagram
+   * Step 1: POST https://www.instagram.com/rupload_igphoto/{upload_id}
+   * Step 2: POST https://www.instagram.com/api/v1/media/configure/
+   */
+  public async publishFeedPost(params: { imageInput: string | Buffer; caption?: string }): Promise<{
+    id: string;
+    media_id: string;
+    fbid: string;
+    status: string;
+    shortcode?: string;
+    raw?: any;
+  }> {
+    if (!this.hasActiveSession()) {
+      throw new Error('Active authenticated session is required to publish feed post.');
+    }
+
+    let imageBuffer: Buffer;
+    if (Buffer.isBuffer(params.imageInput)) {
+      imageBuffer = params.imageInput;
+    } else if (typeof params.imageInput === 'string' && (params.imageInput.startsWith('http://') || params.imageInput.startsWith('https://'))) {
+      const imgRes = await this.transport.requestBuffer(params.imageInput);
+      imageBuffer = imgRes.data;
+    } else if (typeof params.imageInput === 'string' && fs.existsSync(params.imageInput)) {
+      imageBuffer = fs.readFileSync(params.imageInput);
+    } else {
+      throw new Error(`Invalid image input: file not found or unsupported URL '${params.imageInput}'`);
+    }
+
+    const uploadId = Date.now().toString();
+    const waterfallId = crypto.randomUUID();
+    const uploadUrl = `https://www.instagram.com/rupload_igphoto/${uploadId}`;
+    const baseHeaders = this.getWebHeaders('https://www.instagram.com/');
+
+    const ruploadParams = JSON.stringify({
+      upload_id: uploadId,
+      media_type: 1
+    });
+
+    const uploadHeaders: Record<string, string> = {
+      ...baseHeaders,
+      'X_FB_PHOTO_WATERFALL_ID': waterfallId,
+      'X-Entity-Type': 'image/jpeg',
+      'X-Entity-Name': `${uploadId}.jpg`,
+      'X-Entity-Length': imageBuffer.length.toString(),
+      'Offset': '0',
+      'Content-Type': 'image/jpeg',
+      'X-Instagram-Rupload-Params': ruploadParams
+    };
+
+    const uploadRes = await this.transport.request(uploadUrl, {
+      method: 'POST',
+      headers: uploadHeaders,
+      body: imageBuffer,
+      timeoutMs: 35000
+    });
+
+    if (uploadRes.status !== 200) {
+      throw new Error(`Upload step failed with HTTP ${uploadRes.status}: ${uploadRes.data.slice(0, 200)}`);
+    }
+
+    const configureUrl = 'https://www.instagram.com/api/v1/media/configure/';
+    const configurePayload = new URLSearchParams({
+      upload_id: uploadId,
+      caption: params.caption || '',
+      source_type: 'library',
+      disable_comments: '0',
+      like_and_view_counts_disabled: '0'
+    }).toString();
+
+    const configureHeaders = {
+      ...this.getWebHeaders('https://www.instagram.com/'),
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    };
+
+    const configRes = await this.transport.request(configureUrl, {
+      method: 'POST',
+      headers: configureHeaders,
+      body: configurePayload,
+      timeoutMs: 35000
+    });
+
+    if (configRes.status !== 200) {
+      throw new Error(`Configure step failed with HTTP ${configRes.status}: ${configRes.data.slice(0, 200)}`);
+    }
+
+    const parsed = JSON.parse(configRes.data);
+    const mediaObj = parsed.media || {};
+    return {
+      id: String(mediaObj.id || parsed.media_id || uploadId),
+      media_id: String(mediaObj.id || parsed.media_id || uploadId),
+      fbid: String(mediaObj.fbid || uploadId),
+      status: parsed.status || 'ok',
+      shortcode: mediaObj.code,
+      raw: mediaObj
+    };
   }
 }
