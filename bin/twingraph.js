@@ -166,10 +166,15 @@ async function run() {
             const tg = new TwinGraph({ offlineMode: false });
             const metricType = parsedArgs.metric_type || 'overview';
             if (metricType === 'media') {
-              const res = await tg.dashboard.getMediaInsights(parsedArgs.media_id);
+              let mediaId = parsedArgs.media_id;
+              if (mediaId && (mediaId.includes('/p/') || mediaId.includes('/reel/'))) {
+                const m = mediaId.match(/(?:\/p\/|\/reel\/)([a-zA-Z0-9_-]+)/);
+                if (m) mediaId = m[1];
+              }
+              const res = await tg.getMediaInsights(mediaId);
               process.stdout.write(JSON.stringify(res, null, 2) + '\n');
             } else {
-              const res = await tg.dashboard.getAccountOverview(parsedArgs.period || '30d');
+              const res = await tg.dashboard.getOverview(parsedArgs.period || '30d');
               process.stdout.write(JSON.stringify(res, null, 2) + '\n');
             }
             break;
