@@ -118,6 +118,7 @@ export interface GhostAuditReport {
 export declare class GhostService {
     private client;
     private transport;
+    private sessionCookie;
     constructor(client?: TwinGraph);
     /**
      * Helper to decode HTML entities in web meta tags
