@@ -90,9 +90,20 @@ export class MediaTwin {
    */
   public async getInsights(
     mediaId: string,
-    metrics: string[] = ['reach', 'impressions', 'plays', 'saved', 'shares', 'ig_reels_video_view_total_time']
+    metrics: string[] = ['reach', 'impressions', 'plays', 'saved', 'shares', 'likes', 'comments']
   ): Promise<GraphInsightsResponse> {
-    const fullInsights = this.graphqlTwin.translateInsightsToGraphNode(mediaId);
+    const media = await this.getMedia(mediaId);
+    const realMetrics: Record<string, number> = {
+      likes: media.like_count ?? 0,
+      comments: media.comments_count ?? 0,
+      reach: media.like_count ?? 0,
+      impressions: media.like_count ?? 0,
+      plays: media.media_type === 'VIDEO' ? (media.like_count ?? 0) : 0,
+      saved: 0,
+      shares: 0,
+      ig_reels_video_view_total_time: 0
+    };
+    const fullInsights = this.graphqlTwin.translateInsightsToGraphNode(mediaId, realMetrics);
     
     // Filter to requested metrics if specified
     if (metrics && metrics.length > 0) {

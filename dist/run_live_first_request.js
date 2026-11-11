@@ -65,11 +65,11 @@ async function main() {
         },
         insights: {
             data: [
-                { name: 'reach', title: 'Reach', values: [{ value: 19400 }] },
-                { name: 'impressions', title: 'Impressions', values: [{ value: 28400 }] },
-                { name: 'plays', title: 'Plays', values: [{ value: 24580 }] },
-                { name: 'saved', title: 'Saved', values: [{ value: 489 }] },
-                { name: 'shares', title: 'Shares', values: [{ value: 312 }] }
+                { name: 'reach', title: 'Reach', values: [{ value: 0 }] },
+                { name: 'impressions', title: 'Impressions', values: [{ value: 0 }] },
+                { name: 'plays', title: 'Plays', values: [{ value: 0 }] },
+                { name: 'saved', title: 'Saved', values: [{ value: 0 }] },
+                { name: 'shares', title: 'Shares', values: [{ value: 0 }] }
             ]
         }
     };

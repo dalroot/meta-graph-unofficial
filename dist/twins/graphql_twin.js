@@ -361,20 +361,23 @@ export class GraphQLTwin {
     }
     /**
      * Translates raw insight telemetry into official GraphInsightsResponse
+     * Zero hardcoded/mock numbers: strictly uses live provided customMetrics or defaults to 0.
      */
     translateInsightsToGraphNode(mediaId, customMetrics) {
-        const defaults = {
-            reach: { title: 'Reach', desc: 'The number of unique accounts that have seen this media.', val: 19400 },
-            impressions: { title: 'Impressions', desc: 'Total number of times this media was viewed.', val: 28400 },
-            plays: { title: 'Plays', desc: 'The number of times the Reel starts playing.', val: 24580 },
-            saved: { title: 'Saved', desc: 'Number of unique accounts that saved this media.', val: 489 },
-            shares: { title: 'Shares', desc: 'Number of times this media was shared.', val: 312 },
-            ig_reels_video_view_total_time: { title: 'Total Watch Time', desc: 'Total watch duration in seconds.', val: 172060 }
+        const metaDefinitions = {
+            reach: { title: 'Reach', desc: 'The number of unique accounts that have seen this media.' },
+            impressions: { title: 'Impressions', desc: 'Total number of times this media was viewed.' },
+            plays: { title: 'Plays', desc: 'The number of times the Reel starts playing.' },
+            saved: { title: 'Saved', desc: 'Number of unique accounts that saved this media.' },
+            shares: { title: 'Shares', desc: 'Number of times this media was shared.' },
+            ig_reels_video_view_total_time: { title: 'Total Watch Time', desc: 'Total watch duration in seconds.' },
+            likes: { title: 'Likes', desc: 'Total number of likes on this media.' },
+            comments: { title: 'Comments', desc: 'Total number of comments on this media.' }
         };
-        const metricsData = Object.entries(defaults).map(([metricName, meta]) => ({
+        const metricsData = Object.entries(metaDefinitions).map(([metricName, meta]) => ({
             name: metricName,
             period: 'lifetime',
-            values: [{ value: customMetrics?.[metricName] ?? meta.val }],
+            values: [{ value: customMetrics?.[metricName] ?? 0 }],
             title: meta.title,
             description: meta.desc,
             id: `${mediaId}/insights/${metricName}/lifetime`

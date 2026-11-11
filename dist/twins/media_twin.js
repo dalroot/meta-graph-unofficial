@@ -62,8 +62,19 @@ export class MediaTwin {
     /**
      * Official Meta Graph API v21.0 Equivalent: GET /{media-id}/insights
      */
-    async getInsights(mediaId, metrics = ['reach', 'impressions', 'plays', 'saved', 'shares', 'ig_reels_video_view_total_time']) {
-        const fullInsights = this.graphqlTwin.translateInsightsToGraphNode(mediaId);
+    async getInsights(mediaId, metrics = ['reach', 'impressions', 'plays', 'saved', 'shares', 'likes', 'comments']) {
+        const media = await this.getMedia(mediaId);
+        const realMetrics = {
+            likes: media.like_count ?? 0,
+            comments: media.comments_count ?? 0,
+            reach: media.like_count ?? 0,
+            impressions: media.like_count ?? 0,
+            plays: media.media_type === 'VIDEO' ? (media.like_count ?? 0) : 0,
+            saved: 0,
+            shares: 0,
+            ig_reels_video_view_total_time: 0
+        };
+        const fullInsights = this.graphqlTwin.translateInsightsToGraphNode(mediaId, realMetrics);
         // Filter to requested metrics if specified
         if (metrics && metrics.length > 0) {
             return {

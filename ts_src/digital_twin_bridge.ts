@@ -135,7 +135,7 @@ export class DigitalTwinBridge {
         {
           name: 'reach',
           period: 'lifetime',
-          values: [{ value: 19400 }],
+          values: [{ value: 0 }],
           title: 'Reach',
           description: 'The number of unique accounts that have seen this media.',
           id: `${mediaId}/insights/reach/lifetime`
@@ -143,7 +143,7 @@ export class DigitalTwinBridge {
         {
           name: 'impressions',
           period: 'lifetime',
-          values: [{ value: 28400 }],
+          values: [{ value: 0 }],
           title: 'Impressions',
           description: 'Total number of times this media was viewed.',
           id: `${mediaId}/insights/impressions/lifetime`
@@ -151,7 +151,7 @@ export class DigitalTwinBridge {
         {
           name: 'plays',
           period: 'lifetime',
-          values: [{ value: 24580 }],
+          values: [{ value: 0 }],
           title: 'Plays',
           description: 'The number of times the Reel starts playing.',
           id: `${mediaId}/insights/plays/lifetime`
@@ -159,7 +159,7 @@ export class DigitalTwinBridge {
         {
           name: 'saved',
           period: 'lifetime',
-          values: [{ value: 489 }],
+          values: [{ value: 0 }],
           title: 'Saved',
           description: 'Number of unique accounts that saved this media.',
           id: `${mediaId}/insights/saved/lifetime`
@@ -167,7 +167,7 @@ export class DigitalTwinBridge {
         {
           name: 'shares',
           period: 'lifetime',
-          values: [{ value: 312 }],
+          values: [{ value: 0 }],
           title: 'Shares',
           description: 'Number of times this media was shared.',
           id: `${mediaId}/insights/shares/lifetime`
@@ -175,7 +175,7 @@ export class DigitalTwinBridge {
         {
           name: 'ig_reels_video_view_total_time',
           period: 'lifetime',
-          values: [{ value: 172060 }],
+          values: [{ value: 0 }],
           title: 'Total Watch Time',
           description: 'Total watch duration in seconds.',
           id: `${mediaId}/insights/ig_reels_video_view_total_time/lifetime`

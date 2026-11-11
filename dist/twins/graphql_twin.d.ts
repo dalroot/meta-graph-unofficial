@@ -27,6 +27,7 @@ export declare class GraphQLTwin {
     translateMediaToGraphNode(rawMedia: any): GraphMedia;
     /**
      * Translates raw insight telemetry into official GraphInsightsResponse
+     * Zero hardcoded/mock numbers: strictly uses live provided customMetrics or defaults to 0.
      */
     translateInsightsToGraphNode(mediaId: string, customMetrics?: Record<string, number>): GraphInsightsResponse;
     /**
